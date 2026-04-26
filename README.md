@@ -28,12 +28,15 @@ It is the Runtime stage of the InferEdge portfolio pipeline. InferEdgeForge prep
 - Lab-compatible top-level fields
 - automatic result naming and `results/latest.json` handoff
 - limited manifest default apply for Forge handoff preparation
+- TensorRT backend stub for future Jetson integration
 
 ## Current Limitations
 
 - ONNX Runtime CPU only
 - float32 input only
-- TensorRT not implemented yet
+- TensorRT backend is stub-only
+- no TensorRT engine loading yet
+- no CUDA buffer/context execution yet
 - OpenCV/CUDA not linked
 - no real image preprocessing yet
 - manifest parsing is limited to the sample Forge handoff schema
@@ -159,6 +162,14 @@ CLI notes:
 - `--warmup` controls untimed warmup iterations.
 - `--runs` controls timed iterations used for latency and FPS statistics.
 - `--output` writes the benchmark result JSON and creates missing output directories.
+
+TensorRT stub example:
+
+```bash
+./build/inferedge-runtime --model models/sample.engine --engine tensorrt --device cpu --batch 1 --height 224 --width 224 --warmup 1 --runs 1 --output results/tensorrt_stub.json
+```
+
+This command does not execute TensorRT. It creates backend metadata and a skipped benchmark JSON result. Real TensorRT engine loading and execution are planned for the Jetson backend stage.
 
 Output modes:
 
@@ -321,7 +332,8 @@ Forge -> Runtime -> Lab flow:
 │       ├── result_writer.hpp
 │       ├── version.hpp
 │       └── engines/
-│           └── onnxruntime_engine.hpp
+│           ├── onnxruntime_engine.hpp
+│           └── tensorrt_engine.hpp
 ├── src/
 │   ├── cli.cpp
 │   ├── engine.cpp
@@ -329,7 +341,8 @@ Forge -> Runtime -> Lab flow:
 │   ├── manifest.cpp
 │   ├── result_writer.cpp
 │   └── engines/
-│       └── onnxruntime_engine.cpp
+│       ├── onnxruntime_engine.cpp
+│       └── tensorrt_engine.cpp
 ├── scripts/
 │   ├── smoke_default.sh
 │   └── smoke_ort.sh
@@ -356,5 +369,7 @@ Forge -> Runtime -> Lab flow:
 - [x] Example Forge manifest
 - [x] Forge manifest parsing and config default apply
 - [ ] Robust manifest parser or external JSON dependency decision
-- [ ] TensorRT backend on Jetson
+- [x] TensorRT backend stub
+- [ ] TensorRT engine loading on Jetson
+- [ ] TensorRT benchmark runner on Jetson
 - [ ] InferEdgeLab direct import workflow

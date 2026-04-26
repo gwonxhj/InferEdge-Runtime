@@ -30,7 +30,7 @@ std::string require_value(int argc, char** argv, int& index, const std::string& 
 }
 
 bool is_supported_engine(const std::string& engine) {
-    return engine == "onnxruntime" || engine == "ort";
+    return engine == "onnxruntime" || engine == "ort" || engine == "tensorrt" || engine == "trt";
 }
 
 bool is_supported_device(const std::string& device) {
@@ -39,7 +39,8 @@ bool is_supported_device(const std::string& device) {
 
 void validate_engine(const std::string& engine) {
     if (!is_supported_engine(engine)) {
-        throw std::invalid_argument("unsupported engine: " + engine + " (supported: onnxruntime, ort)");
+        throw std::invalid_argument(
+            "unsupported engine: " + engine + " (supported: onnxruntime, ort, tensorrt, trt)");
     }
 }
 
@@ -106,7 +107,7 @@ void print_help() {
         << "  --version              Show version information\n"
         << "  --manifest <path>      Optional Forge/build manifest path used for default runtime config\n"
         << "  --model <path>         Path to an input model file\n"
-        << "  --engine <name>        Runtime engine name (supported: onnxruntime, ort; default: onnxruntime)\n"
+        << "  --engine <name>        Runtime engine name (supported: onnxruntime, ort, tensorrt, trt; default: onnxruntime)\n"
         << "  --device <name>        Target device name (supported: cpu; default: cpu)\n"
         << "  --batch <n>            Dummy input batch size, n >= 1 (default: 1)\n"
         << "  --height <n>           Dummy input height, n >= 1 (default: 224)\n"
