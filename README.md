@@ -10,11 +10,11 @@ This repository is part of the InferEdge portfolio pipeline:
 
 ## Current Stage
 
-The current stage is **C++ Runtime CLI Skeleton** with explicit CLI validation policy, a backend interface, and an ONNX Runtime stub backend.
+The current stage is **C++ Runtime CLI Skeleton** with explicit CLI validation policy, a backend interface, an ONNX Runtime stub backend, and ONNX Runtime C++ link preparation.
 
 This version only provides a minimal C++17 and CMake-based command-line interface. It parses runtime options, validates supported engine/device values and numeric ranges, creates a stub inference engine, then prints the selected benchmark configuration and backend metadata.
 
-Actual inference execution is not implemented yet. ONNX Runtime, TensorRT, OpenCV, CUDA, and other external runtime dependencies are intentionally not linked at this stage.
+Actual inference execution is not implemented yet. TensorRT, OpenCV, CUDA, and other external runtime dependencies are intentionally not linked at this stage.
 
 ## Build
 
@@ -23,14 +23,25 @@ cmake -S . -B build
 cmake --build build
 ```
 
-The `INFEREDGE_ENABLE_ORT` option is available as a preparation switch for the future ONNX Runtime backend:
+## ONNX Runtime C++ Backend Link Preparation
+
+The default build does not require ONNX Runtime:
 
 ```bash
-cmake -S . -B build-ort -DINFEREDGE_ENABLE_ORT=ON
+cmake -S . -B build
+cmake --build build
+```
+
+To validate the ONNX Runtime C++ link path, download the platform-specific ONNX Runtime package from GitHub Releases and keep it outside this repository. Apple Silicon Macs such as M1, M2, and M3 should use the `osx-arm64` package.
+
+```bash
+cmake -S . -B build-ort -DINFEREDGE_ENABLE_ORT=ON -DINFEREDGE_ORT_ROOT=/path/to/onnxruntime-osx-arm64
 cmake --build build-ort
 ```
 
-At the current stage, this option only enables the `INFEREDGE_ENABLE_ORT=1` compile definition. It does not find, include, or link the real ONNX Runtime C++ library yet.
+When `INFEREDGE_ENABLE_ORT=ON`, `INFEREDGE_ORT_ROOT` must point to an external ONNX Runtime C/C++ package root containing `include/onnxruntime_cxx_api.h` and the `lib/onnxruntime` library. The package must not be vendored into this repository.
+
+At the current stage, a linked ONNX Runtime backend only reports backend availability. It does not load a real model, create tensors, inspect input/output metadata, create a session, or run inference yet. The next step will extend this into model loading, session setup, and input/output metadata discovery.
 
 ## Usage
 
@@ -42,7 +53,7 @@ At the current stage, this option only enables the `INFEREDGE_ENABLE_ORT=1` comp
 
 The model path is accepted as a configuration value only. The CLI does not check model file existence and does not run inference yet.
 
-The CLI prints backend metadata for the selected engine. The ONNX Runtime backend is currently a stub and reports `available: false` until the real C++ backend is integrated.
+The CLI prints backend metadata for the selected engine. The ONNX Runtime backend reports `available: false` in the default build and can report `available: true` only when an external ONNX Runtime C++ package is explicitly linked. In both cases, inference execution is still disabled.
 
 ## Roadmap
 

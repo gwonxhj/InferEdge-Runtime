@@ -145,7 +145,7 @@ int run_cli(const RuntimeConfig& config) {
         << "  available: " << (metadata.available ? "true" : "false") << '\n'
         << "  status:    " << metadata.status_message << '\n'
         << "\n"
-        << "Inference execution is not implemented yet.\n";
+        << "Inference execution is not implemented yet. This command currently validates CLI and backend availability only.\n";
 
     return 0;
 }

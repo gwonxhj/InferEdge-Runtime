@@ -1,10 +1,15 @@
 build/
 cmake-build-*/
+deps/
+third_party/
+onnxruntime-*/
 .DS_Store
 *.o
 *.a
 *.so
 *.dylib
+*.dll
+*.lib
 *.exe
 results/
 models/

@@ -15,6 +15,7 @@ endif()
 project(inferedge_runtime VERSION 0.1.0 LANGUAGES CXX)
 
 option(INFEREDGE_ENABLE_ORT "Enable ONNX Runtime backend" OFF)
+set(INFEREDGE_ORT_ROOT "" CACHE PATH "Path to ONNX Runtime C/C++ package root")
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -40,5 +41,32 @@ if(APPLE AND CMAKE_OSX_SYSROOT)
 endif()
 
 if(INFEREDGE_ENABLE_ORT)
-    target_compile_definitions(inferedge-runtime PRIVATE INFEREDGE_ENABLE_ORT=1)
+    if(NOT INFEREDGE_ORT_ROOT)
+        message(FATAL_ERROR "INFEREDGE_ENABLE_ORT=ON requires -DINFEREDGE_ORT_ROOT=/path/to/onnxruntime")
+    endif()
+
+    set(INFEREDGE_ORT_INCLUDE "${INFEREDGE_ORT_ROOT}/include")
+    set(INFEREDGE_ORT_LIBRARY_DIR "${INFEREDGE_ORT_ROOT}/lib")
+
+    if(NOT EXISTS "${INFEREDGE_ORT_INCLUDE}/onnxruntime_cxx_api.h")
+        message(FATAL_ERROR "ONNX Runtime C++ header not found: ${INFEREDGE_ORT_INCLUDE}/onnxruntime_cxx_api.h")
+    endif()
+
+    find_library(ONNXRUNTIME_LIBRARY
+        NAMES onnxruntime
+        PATHS "${INFEREDGE_ORT_LIBRARY_DIR}"
+        NO_DEFAULT_PATH
+    )
+
+    if(NOT ONNXRUNTIME_LIBRARY)
+        message(FATAL_ERROR "ONNX Runtime library not found under: ${INFEREDGE_ORT_LIBRARY_DIR}")
+    endif()
+
+    target_include_directories(inferedge-runtime
+        SYSTEM PRIVATE
+            "${INFEREDGE_ORT_INCLUDE}"
+    )
+    target_link_libraries(inferedge-runtime PRIVATE "${ONNXRUNTIME_LIBRARY}")
+    target_compile_definitions(inferedge-runtime PRIVATE INFEREDGE_ENABLE_ORT=1 INFEREDGE_ORT_LINKED=1)
+    set_target_properties(inferedge-runtime PROPERTIES BUILD_RPATH "${INFEREDGE_ORT_LIBRARY_DIR}")
 endif()
