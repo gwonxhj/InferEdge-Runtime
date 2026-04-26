@@ -1,4 +1,4 @@
-# InferEdgeRuntime
+# InferEdge-Runtime
 
 InferEdgeRuntime is a C++ Edge AI runtime project for on-device inference execution and benchmarking.
 
@@ -10,9 +10,9 @@ This repository is part of the InferEdge portfolio pipeline:
 
 ## Current Stage
 
-The current stage is **C++ Runtime CLI Skeleton**.
+The current stage is **C++ Runtime CLI Skeleton** with explicit CLI validation policy.
 
-This version only provides a minimal C++17 and CMake-based command-line interface. It parses runtime options and prints the selected benchmark configuration.
+This version only provides a minimal C++17 and CMake-based command-line interface. It parses runtime options, validates supported engine/device values and numeric ranges, then prints the selected benchmark configuration.
 
 Actual inference execution is not implemented yet. ONNX Runtime, TensorRT, OpenCV, and other external runtime dependencies are intentionally not linked at this stage.
 
