@@ -27,6 +27,7 @@ It is the Runtime stage of the InferEdge portfolio pipeline. InferEdgeForge prep
 - JSON result export
 - Lab-compatible top-level fields
 - automatic result naming and `results/latest.json` handoff
+- optional manifest path recording for Forge handoff preparation
 
 ## Current Limitations
 
@@ -35,8 +36,10 @@ It is the Runtime stage of the InferEdge portfolio pipeline. InferEdgeForge prep
 - TensorRT not implemented yet
 - OpenCV/CUDA not linked
 - no real image preprocessing yet
-- no model artifact auto-discovery from Forge yet
-- no automated test suite yet
+- manifest JSON parsing is not implemented yet
+- no full unit test suite yet
+- GitHub Actions currently runs default smoke test only
+- ORT linked smoke test remains local/manual because it requires external ONNX Runtime and model files
 
 ## Requirements
 
@@ -107,6 +110,12 @@ Run a benchmark with a local ONNX model:
 ./build-ort/inferedge-runtime --model /path/to/model.onnx --engine onnxruntime --device cpu --batch 1 --height 224 --width 224 --warmup 3 --runs 10 --output results/ort_cpu.json
 ```
 
+Record a Forge/build manifest path:
+
+```bash
+./build-ort/inferedge-runtime --manifest /path/to/manifest.json --model /path/to/model.onnx --engine onnxruntime --device cpu --batch 1 --height 224 --width 224 --warmup 3 --runs 10 --output auto
+```
+
 Auto-named output:
 
 ```bash
@@ -137,10 +146,12 @@ xattr -dr com.apple.quarantine ~/onnxruntime/onnxruntime-osx-arm64-1.25.0
 ./build/inferedge-runtime --help
 ./build/inferedge-runtime --version
 ./build/inferedge-runtime --model models/sample.onnx --engine onnxruntime --device cpu --batch 1 --height 224 --width 224 --warmup 5 --runs 50 --output results/sample.json
+./build-ort/inferedge-runtime --manifest /path/to/manifest.json --model /path/to/model.onnx --engine onnxruntime --device cpu --batch 1 --height 224 --width 224 --warmup 3 --runs 10 --output auto
 ```
 
 CLI notes:
 
+- `--manifest` records a Forge/build manifest path in the result JSON. It does not parse or apply manifest values yet.
 - `--batch`, `--height`, and `--width` resolve dynamic dummy input dimensions.
 - Static model dimensions take precedence over CLI shape overrides.
 - `--warmup` controls untimed warmup iterations.
@@ -173,6 +184,7 @@ Runtime JSON results include nested structured fields for detailed reporting and
 Main nested fields:
 
 - `schema_version`
+- `manifest_path`
 - `model`
 - `engine`
 - `device`
@@ -191,10 +203,12 @@ The `extra` object includes:
 - `json_export`
 - `output_mode`: `auto` or `explicit`
 - `latest_path`: currently `results/latest.json`
+- `manifest_recorded`: `true` when `--manifest` was provided, otherwise `false`
 
 Top-level compatibility fields:
 
 - `model_name`
+- `manifest_path`
 - `model_path`
 - `engine_name`
 - `engine_backend`
@@ -209,6 +223,29 @@ Top-level compatibility fields:
 - `status`
 
 See [examples/README.md](examples/README.md) for command examples and compact JSON field notes.
+
+## Forge Manifest Handoff Preparation
+
+Runtime can now record a manifest path produced by Forge or another build stage. This step does not parse or apply manifest values yet. The next integration step will let Runtime read a manifest and receive model path, engine/backend, precision, input shape, and artifact metadata from Forge.
+
+Draft manifest schema direction:
+
+    schema_version: inferedge-forge-manifest-v1
+    artifact:
+      model_path: /path/to/model.onnx
+      model_name: toy224.onnx
+      precision: fp32
+      format: onnx
+    runtime:
+      engine: onnxruntime
+      device: cpu
+      batch: 1
+      height: 224
+      width: 224
+    metadata:
+      source: InferEdgeForge
+      created_at: 2026-04-26T12:00:00Z
+      notes: optional build notes
 
 ## InferEdgeLab Compatibility
 
@@ -262,6 +299,7 @@ Forge -> Runtime -> Lab flow:
 - [x] Scripted smoke tests
 - [x] GitHub Actions CI smoke tests
 - [x] Auto result naming and latest.json handoff
+- [x] Manifest path recording for Forge handoff preparation
+- [ ] Forge manifest parsing and config auto-apply
 - [ ] TensorRT backend on Jetson
-- [ ] Forge metadata input integration
 - [ ] InferEdgeLab direct import workflow
