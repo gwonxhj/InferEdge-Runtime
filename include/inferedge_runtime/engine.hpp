@@ -28,6 +28,20 @@ struct ModelMetadata {
     std::vector<TensorMetadata> outputs;
 };
 
+struct BenchmarkResult {
+    int warmup_runs = 0;
+    int timed_runs = 0;
+    double mean_ms = 0.0;
+    double min_ms = 0.0;
+    double max_ms = 0.0;
+    double std_ms = 0.0;
+    double p50_ms = 0.0;
+    double p90_ms = 0.0;
+    double p99_ms = 0.0;
+    double fps = 0.0;
+    std::vector<double> samples_ms;
+};
+
 class IInferenceEngine {
 public:
     virtual ~IInferenceEngine() = default;
@@ -36,6 +50,7 @@ public:
     virtual ModelMetadata model_metadata() const = 0;
     virtual void load_model(const std::string& model_path) = 0;
     virtual void run_once() = 0;
+    virtual BenchmarkResult benchmark(int warmup, int runs) = 0;
 };
 
 std::unique_ptr<IInferenceEngine> create_engine(const RuntimeConfig& config);

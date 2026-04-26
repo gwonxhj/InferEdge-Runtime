@@ -4,7 +4,10 @@
 #include <onnxruntime_cxx_api.h>
 #endif
 
+#include <algorithm>
+#include <cmath>
 #include <cstddef>
+#include <chrono>
 #include <filesystem>
 #include <limits>
 #include <numeric>
@@ -17,6 +20,20 @@ namespace inferedge_runtime {
 namespace {
 
 #ifdef INFEREDGE_ORT_LINKED
+double percentile_nearest_rank(std::vector<double> sorted_samples, double percentile) {
+    if (sorted_samples.empty()) {
+        return 0.0;
+    }
+
+    std::sort(sorted_samples.begin(), sorted_samples.end());
+    const double rank = percentile / 100.0 * static_cast<double>(sorted_samples.size());
+    std::size_t index = static_cast<std::size_t>(std::ceil(rank));
+    if (index == 0) {
+        index = 1;
+    }
+    return sorted_samples[index - 1];
+}
+
 std::string element_type_to_string(ONNXTensorElementDataType element_type) {
     switch (element_type) {
         case ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT:
@@ -119,7 +136,7 @@ EngineMetadata OnnxRuntimeEngine::metadata() const {
     metadata.device = impl_->config.device;
 #ifdef INFEREDGE_ORT_LINKED
     metadata.available = true;
-    metadata.status_message = "ONNX Runtime backend is linked. Inference execution is available for one dummy run.";
+    metadata.status_message = "ONNX Runtime backend is linked. Benchmark execution is available.";
 #else
     metadata.available = false;
     metadata.status_message =
@@ -254,6 +271,67 @@ void OnnxRuntimeEngine::run_once() {
         impl_->output_name_ptrs.data(),
         impl_->output_name_ptrs.size());
 #else
+    throw std::runtime_error("ONNX Runtime backend is not available in this build");
+#endif
+}
+
+BenchmarkResult OnnxRuntimeEngine::benchmark(int warmup, int runs) {
+#ifdef INFEREDGE_ORT_LINKED
+    if (!impl_->session) {
+        throw std::runtime_error("model is not loaded");
+    }
+
+    if (warmup < 0) {
+        throw std::runtime_error("warmup must be greater than or equal to 0");
+    }
+
+    if (runs < 1) {
+        throw std::runtime_error("runs must be greater than or equal to 1");
+    }
+
+    for (int i = 0; i < warmup; ++i) {
+        run_once();
+    }
+
+    BenchmarkResult result;
+    result.warmup_runs = warmup;
+    result.timed_runs = runs;
+    result.samples_ms.reserve(static_cast<std::size_t>(runs));
+
+    for (int i = 0; i < runs; ++i) {
+        const auto start = std::chrono::steady_clock::now();
+        run_once();
+        const auto end = std::chrono::steady_clock::now();
+        const std::chrono::duration<double, std::milli> elapsed = end - start;
+        result.samples_ms.push_back(elapsed.count());
+    }
+
+    const auto minmax = std::minmax_element(result.samples_ms.begin(), result.samples_ms.end());
+    result.min_ms = *minmax.first;
+    result.max_ms = *minmax.second;
+    result.mean_ms =
+        std::accumulate(result.samples_ms.begin(), result.samples_ms.end(), 0.0) /
+        static_cast<double>(result.samples_ms.size());
+
+    double variance = 0.0;
+    for (const double sample : result.samples_ms) {
+        const double diff = sample - result.mean_ms;
+        variance += diff * diff;
+    }
+    variance /= static_cast<double>(result.samples_ms.size());
+    result.std_ms = std::sqrt(variance);
+
+    std::vector<double> sorted_samples = result.samples_ms;
+    std::sort(sorted_samples.begin(), sorted_samples.end());
+    result.p50_ms = percentile_nearest_rank(sorted_samples, 50.0);
+    result.p90_ms = percentile_nearest_rank(sorted_samples, 90.0);
+    result.p99_ms = percentile_nearest_rank(sorted_samples, 99.0);
+    result.fps = result.mean_ms > 0.0 ? 1000.0 / result.mean_ms : 0.0;
+
+    return result;
+#else
+    (void)warmup;
+    (void)runs;
     throw std::runtime_error("ONNX Runtime backend is not available in this build");
 #endif
 }
