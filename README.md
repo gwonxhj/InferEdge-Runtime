@@ -42,6 +42,26 @@ It is the Runtime stage of the InferEdge portfolio pipeline. InferEdgeForge prep
 - Optional: ONNX Runtime C/C++ package
 - Apple Silicon users should use the `osx-arm64` ONNX Runtime package
 
+## Smoke Test Scripts
+
+Use the smoke scripts before opening a PR or after changing runtime behavior.
+
+Default smoke test:
+
+```bash
+scripts/smoke_default.sh
+```
+
+This builds the dependency-free target, runs help/version checks, writes `results/smoke_default.json`, validates the JSON, and confirms the benchmark status is `skipped`.
+
+ONNX Runtime linked smoke test:
+
+```bash
+scripts/smoke_ort.sh "$HOME/onnxruntime/onnxruntime-osx-arm64-1.25.0" /path/to/model.onnx
+```
+
+This requires a local ONNX Runtime package and a local ONNX model file outside the repository. If macOS blocks the downloaded ONNX Runtime `.dylib`, use the `xattr` command in the macOS quarantine note below.
+
 ## Quickstart: Default Build
 
 The default build does not require ONNX Runtime. It still writes a JSON result, but the benchmark is marked as skipped.
@@ -181,6 +201,9 @@ Forge -> Runtime -> Lab flow:
 │   ├── main.cpp
 │   └── engines/
 │       └── onnxruntime_engine.cpp
+├── scripts/
+│   ├── smoke_default.sh
+│   └── smoke_ort.sh
 ├── examples/
 │   └── README.md
 └── tests/
@@ -197,7 +220,8 @@ Forge -> Runtime -> Lab flow:
 - [x] Benchmark runner
 - [x] JSON result export
 - [x] Lab-compatible JSON fields
+- [x] Scripted smoke tests
 - [ ] TensorRT backend on Jetson
 - [ ] Forge metadata input integration
 - [ ] InferEdgeLab direct import workflow
-- [ ] Automated smoke tests
+- [ ] GitHub Actions CI smoke tests
