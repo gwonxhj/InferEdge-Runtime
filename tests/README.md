@@ -101,6 +101,31 @@ print("manifest sample smoke ok")
 PY
 ```
 
+## Manifest Parser Smoke Test
+
+Manifest-only default apply:
+
+```bash
+./build/inferedge-runtime --manifest examples/manifest.sample.json --output results/manifest_only.json
+```
+
+Expected:
+
+- `model_path` is loaded from `artifact.model_path`
+- `engine`, `device`, `batch`, `height`, and `width` are loaded from `runtime`
+- `manifest_applied` is `true`
+
+CLI override priority:
+
+```bash
+./build/inferedge-runtime --manifest examples/manifest.sample.json --model models/override.onnx --batch 2 --height 320 --width 320 --output results/manifest_override.json
+```
+
+Expected:
+
+- CLI `--model` wins over `artifact.model_path`
+- CLI `--batch`, `--height`, and `--width` win over manifest values
+
 ## JSON Validity Test
 
 ```bash

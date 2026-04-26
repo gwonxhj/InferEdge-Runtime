@@ -27,7 +27,7 @@ It is the Runtime stage of the InferEdge portfolio pipeline. InferEdgeForge prep
 - JSON result export
 - Lab-compatible top-level fields
 - automatic result naming and `results/latest.json` handoff
-- optional manifest path recording for Forge handoff preparation
+- limited manifest default apply for Forge handoff preparation
 
 ## Current Limitations
 
@@ -36,7 +36,8 @@ It is the Runtime stage of the InferEdge portfolio pipeline. InferEdgeForge prep
 - TensorRT not implemented yet
 - OpenCV/CUDA not linked
 - no real image preprocessing yet
-- manifest JSON parsing is not implemented yet
+- manifest parsing is limited to the sample Forge handoff schema
+- no full general-purpose JSON parser yet
 - no full unit test suite yet
 - GitHub Actions currently runs default smoke test only
 - ORT linked smoke test remains local/manual because it requires external ONNX Runtime and model files
@@ -151,7 +152,8 @@ xattr -dr com.apple.quarantine ~/onnxruntime/onnxruntime-osx-arm64-1.25.0
 
 CLI notes:
 
-- `--manifest` records a Forge/build manifest path in the result JSON. It does not parse or apply manifest values yet.
+- `--manifest` loads limited defaults from the Forge/build manifest schema.
+- CLI-provided values always take priority over manifest defaults.
 - `--batch`, `--height`, and `--width` resolve dynamic dummy input dimensions.
 - Static model dimensions take precedence over CLI shape overrides.
 - `--warmup` controls untimed warmup iterations.
@@ -204,6 +206,8 @@ The `extra` object includes:
 - `output_mode`: `auto` or `explicit`
 - `latest_path`: currently `results/latest.json`
 - `manifest_recorded`: `true` when `--manifest` was provided, otherwise `false`
+- `manifest_precision`: recorded from `artifact.precision`
+- `manifest_format`: recorded from `artifact.format`
 
 Top-level compatibility fields:
 
@@ -226,7 +230,7 @@ See [examples/README.md](examples/README.md) for command examples and compact JS
 
 ## Forge Manifest Handoff Preparation
 
-Runtime can now record a manifest path produced by Forge or another build stage. This step does not parse or apply manifest values yet. The next integration step will let Runtime read a manifest and receive model path, engine/backend, precision, input shape, and artifact metadata from Forge.
+Runtime can now record a manifest path produced by Forge or another build stage and apply a limited set of manifest values as default runtime config. CLI-provided values always take priority over manifest defaults.
 
 Sample manifest:
 
@@ -235,19 +239,42 @@ Sample manifest:
 Current behavior:
 
 - Runtime records the `--manifest` path in the result JSON.
-- Runtime does not read `model_path`, `engine`, `batch`, `height`, or `width` from the manifest yet.
-- Manifest parsing and RuntimeConfig auto-apply are planned for the next step.
+- Runtime reads limited defaults from `examples/manifest.sample.json` style manifests.
+- Runtime applies manifest defaults only when the same value was not provided directly by CLI.
+
+Applied manifest fields:
+
+- `artifact.model_path`
+- `runtime.engine`
+- `runtime.device`
+- `runtime.batch`
+- `runtime.height`
+- `runtime.width`
+
+Recorded-only manifest fields:
+
+- `artifact.precision`
+- `artifact.format`
+
+Not applied yet:
+
+- `warmup`
+- `runs`
+- `output`
+- arbitrary metadata
 
 Default build example:
 
 ```bash
-./build/inferedge-runtime --manifest examples/manifest.sample.json --model models/sample.onnx --engine onnxruntime --device cpu --batch 1 --height 224 --width 224 --warmup 1 --runs 1 --output auto
+./build/inferedge-runtime --manifest examples/manifest.sample.json --output auto
 ```
 
-ONNX Runtime linked example:
+The sample manifest uses `/path/to/model.onnx` as a placeholder. For a real run, either edit a local manifest outside the repository to point at a real model or override the model path from the CLI.
+
+CLI override example:
 
 ```bash
-./build-ort/inferedge-runtime --manifest examples/manifest.sample.json --model /path/to/model.onnx --engine onnxruntime --device cpu --batch 1 --height 224 --width 224 --warmup 3 --runs 10 --output auto
+./build-ort/inferedge-runtime --manifest examples/manifest.sample.json --model /Users/GwonHyeokJun/Desktop/edgebench/models/toy224.onnx --batch 1 --height 224 --width 224 --output auto
 ```
 
 Draft manifest schema direction:
@@ -323,6 +350,7 @@ Forge -> Runtime -> Lab flow:
 - [x] Auto result naming and latest.json handoff
 - [x] Manifest path recording for Forge handoff preparation
 - [x] Example Forge manifest
-- [ ] Forge manifest parsing and config auto-apply
+- [x] Forge manifest parsing and config default apply
+- [ ] Robust manifest parser or external JSON dependency decision
 - [ ] TensorRT backend on Jetson
 - [ ] InferEdgeLab direct import workflow
