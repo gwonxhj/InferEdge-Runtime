@@ -103,6 +103,18 @@ std::filesystem::path resolve_output_path(
     return std::filesystem::path("results") / filename;
 }
 
+std::string make_compare_key(const RuntimeConfig& config) {
+    const std::string model_stem = sanitize_filename_component(
+        std::filesystem::path(config.model_path).stem().string());
+    return model_stem + "__b" + std::to_string(config.batch) + "__h" +
+           std::to_string(config.height) + "w" + std::to_string(config.width) + "__fp32";
+}
+
+std::string make_backend_key(const EngineMetadata& engine_metadata, const RuntimeConfig& config) {
+    return sanitize_filename_component(engine_metadata.backend) + "__" +
+           sanitize_filename_component(config.device);
+}
+
 std::string system_os_name() {
 #if defined(__APPLE__)
     return "macOS";
@@ -206,6 +218,8 @@ std::filesystem::path write_result_json(
     const std::filesystem::path output_path = resolve_output_path(config, engine_metadata, timestamp);
     const std::filesystem::path latest_path("results/latest.json");
     const std::string output_mode = config.output_path == "auto" ? "auto" : "explicit";
+    const std::string compare_key = make_compare_key(config);
+    const std::string backend_key = make_backend_key(engine_metadata, config);
 
     std::ostringstream output;
     output << std::fixed << std::setprecision(6);
@@ -213,6 +227,9 @@ std::filesystem::path write_result_json(
     output
         << "{\n"
         << "  \"schema_version\": \"inferedge-runtime-result-v1\",\n"
+        << "  \"compare_key\": " << json_string(compare_key) << ",\n"
+        << "  \"backend_key\": " << json_string(backend_key) << ",\n"
+        << "  \"runtime_role\": \"runtime-result\",\n"
         << "  \"manifest_path\": " << json_string(config.manifest_path) << ",\n"
         << "  \"manifest_applied\": " << (config.manifest_applied ? "true" : "false") << ",\n"
         << "  \"model_name\": " << json_string(model_name) << ",\n"
@@ -294,7 +311,10 @@ std::filesystem::path write_result_json(
         << "    \"latest_path\": \"results/latest.json\",\n"
         << "    \"manifest_recorded\": " << (config.manifest_path.empty() ? "false" : "true") << ",\n"
         << "    \"manifest_precision\": " << json_string(config.manifest_precision) << ",\n"
-        << "    \"manifest_format\": " << json_string(config.manifest_format) << "\n"
+        << "    \"manifest_format\": " << json_string(config.manifest_format) << ",\n"
+        << "    \"compare_ready\": true,\n"
+        << "    \"compare_key\": " << json_string(compare_key) << ",\n"
+        << "    \"backend_key\": " << json_string(backend_key) << "\n"
         << "  }\n"
         << "}\n";
 

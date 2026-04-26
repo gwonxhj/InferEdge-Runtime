@@ -97,6 +97,12 @@ data = json.loads(Path("results/manifest_sample_smoke.json").read_text())
 assert data["manifest_path"] == "examples/manifest.sample.json"
 assert data["run_config"]["manifest_path"] == "examples/manifest.sample.json"
 assert data["extra"]["manifest_recorded"] is True
+assert data["runtime_role"] == "runtime-result"
+assert "compare_key" in data
+assert "backend_key" in data
+assert data["extra"]["compare_ready"] is True
+assert data["extra"]["compare_key"] == data["compare_key"]
+assert data["extra"]["backend_key"] == data["backend_key"]
 print("manifest sample smoke ok")
 PY
 ```
