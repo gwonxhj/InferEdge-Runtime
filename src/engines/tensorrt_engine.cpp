@@ -21,6 +21,12 @@
 #include <cuda_runtime_api.h>
 #endif
 
+#ifdef INFEREDGE_OPENCV_LINKED
+#include <opencv2/core.hpp>
+#include <opencv2/imgcodecs.hpp>
+#include <opencv2/imgproc.hpp>
+#endif
+
 namespace inferedge_runtime {
 namespace {
 
@@ -203,6 +209,67 @@ std::size_t tensor_byte_size(const TensorMetadata& tensor, std::size_t element_c
     return element_count * sizeof(float);
 }
 
+std::vector<float> load_image_tensor_nchw(
+    const RuntimeConfig& config,
+    const TensorMetadata& tensor,
+    std::size_t element_count) {
+    if (tensor.shape.size() != 4) {
+        throw std::runtime_error("real image input currently requires NCHW 4D input tensor: " + tensor.name);
+    }
+
+    const int64_t batch = tensor.shape[0];
+    const int64_t channels = tensor.shape[1];
+    const int64_t height = tensor.shape[2];
+    const int64_t width = tensor.shape[3];
+    if (batch <= 0 || channels <= 0 || height <= 0 || width <= 0) {
+        throw std::runtime_error("real image input requires positive tensor dimensions: " + tensor.name);
+    }
+    if (channels != 3) {
+        throw std::runtime_error("real image input currently supports 3-channel NCHW tensors only: " + tensor.name);
+    }
+
+#ifndef INFEREDGE_OPENCV_LINKED
+    (void)config;
+    throw std::runtime_error("real image input requires OpenCV-enabled build: reconfigure with -DINFEREDGE_ENABLE_OPENCV=ON");
+#else
+    if (!std::filesystem::exists(config.input_path)) {
+        throw std::runtime_error("input image file not found: " + config.input_path);
+    }
+
+    cv::Mat image = cv::imread(config.input_path, cv::IMREAD_COLOR);
+    if (image.empty()) {
+        throw std::runtime_error("failed to read input image: " + config.input_path);
+    }
+
+    cv::Mat rgb;
+    cv::cvtColor(image, rgb, cv::COLOR_BGR2RGB);
+
+    cv::Mat resized;
+    cv::resize(rgb, resized, cv::Size(static_cast<int>(width), static_cast<int>(height)));
+
+    cv::Mat float_image;
+    resized.convertTo(float_image, CV_32FC3, 1.0 / 255.0);
+
+    std::vector<float> buffer(element_count, 0.0F);
+    const std::size_t image_stride = static_cast<std::size_t>(channels * height * width);
+    for (int64_t b = 0; b < batch; ++b) {
+        const std::size_t batch_offset = static_cast<std::size_t>(b) * image_stride;
+        for (int64_t y = 0; y < height; ++y) {
+            for (int64_t x = 0; x < width; ++x) {
+                const cv::Vec3f pixel = float_image.at<cv::Vec3f>(static_cast<int>(y), static_cast<int>(x));
+                for (int64_t c = 0; c < channels; ++c) {
+                    const std::size_t offset =
+                        batch_offset +
+                        static_cast<std::size_t>(c * height * width + y * width + x);
+                    buffer[offset] = pixel[static_cast<int>(c)];
+                }
+            }
+        }
+    }
+    return buffer;
+#endif
+}
+
 void release_buffers(std::vector<TensorRTBuffer>& buffers) {
     for (TensorRTBuffer& buffer : buffers) {
         if (buffer.device_buffer != nullptr) {
@@ -266,7 +333,11 @@ void prepare_buffers(TensorRTEngineImpl& impl) {
         buffer.shape = tensor.shape;
         buffer.element_count = tensor_element_count(buffer.shape);
         buffer.byte_size = tensor_byte_size(tensor, buffer.element_count);
-        buffer.host_float_buffer.assign(buffer.element_count, 0.0F);
+        if (is_input && !impl.config.input_path.empty()) {
+            buffer.host_float_buffer = load_image_tensor_nchw(impl.config, tensor, buffer.element_count);
+        } else {
+            buffer.host_float_buffer.assign(buffer.element_count, 0.0F);
+        }
 
         check_cuda(cudaMalloc(&buffer.device_buffer, buffer.byte_size), "Failed to allocate CUDA buffer: " + buffer.name);
         check_cuda(cudaMemset(buffer.device_buffer, 0, buffer.byte_size), "Failed to initialize CUDA buffer: " + buffer.name);
@@ -299,7 +370,6 @@ void execute_once(TensorRTEngineImpl& impl) {
 
     for (TensorRTBuffer& buffer : impl.buffers) {
         if (buffer.is_input) {
-            std::fill(buffer.host_float_buffer.begin(), buffer.host_float_buffer.end(), 0.0F);
             check_cuda(
                 cudaMemcpyAsync(
                     buffer.device_buffer,
