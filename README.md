@@ -26,6 +26,7 @@ It is the Runtime stage of the InferEdge portfolio pipeline. InferEdgeForge prep
 - FPS calculation
 - JSON result export
 - Lab-compatible top-level fields
+- automatic result naming and `results/latest.json` handoff
 
 ## Current Limitations
 
@@ -106,6 +107,12 @@ Run a benchmark with a local ONNX model:
 ./build-ort/inferedge-runtime --model /path/to/model.onnx --engine onnxruntime --device cpu --batch 1 --height 224 --width 224 --warmup 3 --runs 10 --output results/ort_cpu.json
 ```
 
+Auto-named output:
+
+```bash
+./build-ort/inferedge-runtime --model /path/to/model.onnx --engine onnxruntime --device cpu --batch 1 --height 224 --width 224 --warmup 3 --runs 10 --output auto
+```
+
 Expected behavior:
 
 - backend availability is `true`
@@ -113,6 +120,8 @@ Expected behavior:
 - warmup iterations run before timed runs
 - latency and FPS are printed
 - `results/ort_cpu.json` is created
+- `--output auto` writes a structured filename under `results/`
+- every run also writes `results/latest.json`
 
 ## macOS Quarantine Note
 
@@ -138,6 +147,25 @@ CLI notes:
 - `--runs` controls timed iterations used for latency and FPS statistics.
 - `--output` writes the benchmark result JSON and creates missing output directories.
 
+Output modes:
+
+- `--output results/foo.json`: writes to an explicit path.
+- `--output auto`: writes to an auto-generated filename under `results/`.
+
+Auto filename rule:
+
+```text
+{model}__{engine}__{device}__{precision}__b{batch}__h{height}w{width}__{timestamp}.json
+```
+
+Example:
+
+```text
+toy224__onnxruntime__cpu__fp32__b1__h224w224__20260426T115825Z.json
+```
+
+Every run also writes the same JSON content to `results/latest.json`. This stable file is useful for quick handoff to InferEdgeLab or small scripts that only need the most recent result.
+
 ## JSON Result Schema
 
 Runtime JSON results include nested structured fields for detailed reporting and top-level compatibility fields for quick comparison.
@@ -156,6 +184,13 @@ Main nested fields:
 - `system`
 - `model_metadata`
 - `extra`
+
+The `extra` object includes:
+
+- `runtime`
+- `json_export`
+- `output_mode`: `auto` or `explicit`
+- `latest_path`: currently `results/latest.json`
 
 Top-level compatibility fields:
 
@@ -225,7 +260,8 @@ Forge -> Runtime -> Lab flow:
 - [x] JSON result export
 - [x] Lab-compatible JSON fields
 - [x] Scripted smoke tests
+- [x] GitHub Actions CI smoke tests
+- [x] Auto result naming and latest.json handoff
 - [ ] TensorRT backend on Jetson
 - [ ] Forge metadata input integration
 - [ ] InferEdgeLab direct import workflow
-- [ ] GitHub Actions CI smoke tests
