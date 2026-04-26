@@ -34,6 +34,16 @@ InferEdgeRuntime benchmark results are designed to answer:
 
 This makes the metric useful for deployment-oriented evaluation, even when it differs from lower-level TensorRT profiler numbers.
 
+## Cross-backend Comparison Policy
+
+When comparing ONNX Runtime and TensorRT results, compare only results with the same `compare_key`.
+
+The `compare_key` groups model and input condition, while `backend_key` identifies the backend/device pair. InferEdgeLab should use `compare_key + backend_key` as the basic comparison unit.
+
+Runtime latency remains backend-specific end-to-end wall-clock latency. TensorRT `trtexec` GPU latency should not be directly compared with Runtime JSON `mean_ms`.
+
+InferEdgeRuntime does not calculate cross-backend comparison results. It only emits compare-ready metadata so InferEdgeLab can own comparison, reporting, and visualization.
+
 ## Current Non-goals
 
 The current benchmark policy does not include:

@@ -81,6 +81,9 @@ Nested fields for detailed reporting:
 
 Top-level compatibility fields for quick comparison:
 
+- `compare_key`
+- `backend_key`
+- `runtime_role`
 - `model_name`
 - `engine_name`
 - `device_name`
@@ -89,3 +92,10 @@ Top-level compatibility fields for quick comparison:
 - `fps_value`
 - `success`
 - `status`
+
+Compare-ready metadata:
+
+- `compare_key` groups results from the same model and input condition.
+- `backend_key` identifies the backend/device pair.
+- `runtime_role` is fixed to `runtime-result`.
+- Runtime writes these fields for InferEdgeLab but does not perform comparison itself.

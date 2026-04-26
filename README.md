@@ -276,9 +276,15 @@ The `extra` object includes:
 - `manifest_recorded`: `true` when `--manifest` was provided, otherwise `false`
 - `manifest_precision`: recorded from `artifact.precision`
 - `manifest_format`: recorded from `artifact.format`
+- `compare_ready`: currently `true`
+- `compare_key`
+- `backend_key`
 
 Top-level compatibility fields:
 
+- `compare_key`
+- `backend_key`
+- `runtime_role`
 - `model_name`
 - `manifest_path`
 - `model_path`
@@ -369,6 +375,14 @@ Draft manifest schema direction:
 Runtime JSON results include both nested structured fields and top-level compatibility fields.
 
 The nested fields are intended for detailed reports and future schema expansion. The top-level compatibility fields are intended for quick comparison in InferEdgeLab and EdgeBench-style loaders without deep nested parsing.
+
+Runtime does not perform comparison calculations. It only writes compare-ready metadata that Lab can consume:
+
+- `compare_key`: groups results from the same model and input condition, such as `toy224__b1__h224w224__fp32`
+- `backend_key`: identifies the backend/device pair, such as `onnxruntime__cpu` or `tensorrt__jetson`
+- `runtime_role`: fixed to `runtime-result`
+
+InferEdgeLab can compare results that share the same `compare_key` and use `backend_key` to distinguish backend/device variants.
 
 Forge -> Runtime -> Lab flow:
 
