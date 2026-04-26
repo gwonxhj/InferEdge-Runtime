@@ -25,6 +25,8 @@ add_executable(inferedge-runtime
     src/main.cpp
     src/cli.cpp
     src/engine.cpp
+    src/manifest.cpp
+    src/result_writer.cpp
     src/engines/onnxruntime_engine.cpp
 )
 

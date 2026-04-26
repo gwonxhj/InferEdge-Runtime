@@ -317,6 +317,8 @@ Forge -> Runtime -> Lab flow:
 │   └── inferedge_runtime/
 │       ├── cli.hpp
 │       ├── engine.hpp
+│       ├── manifest.hpp
+│       ├── result_writer.hpp
 │       ├── version.hpp
 │       └── engines/
 │           └── onnxruntime_engine.hpp
@@ -324,6 +326,8 @@ Forge -> Runtime -> Lab flow:
 │   ├── cli.cpp
 │   ├── engine.cpp
 │   ├── main.cpp
+│   ├── manifest.cpp
+│   ├── result_writer.cpp
 │   └── engines/
 │       └── onnxruntime_engine.cpp
 ├── scripts/
