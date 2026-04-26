@@ -15,7 +15,7 @@ InferEdgeRuntime v0.1.0 is a validated MVP release.
 - ONNX Runtime CPU backend: fully functional
 - Benchmark + JSON export: stable
 - Forge/Lab pipeline: partially integrated (manifest + JSON handoff)
-- TensorRT backend: one-shot inference on Jetson, benchmark planned
+- TensorRT backend: benchmark execution on Jetson
 
 ## InferEdge Pipeline Position
 
@@ -41,6 +41,7 @@ InferEdgeRuntime v0.1.0 is a validated MVP release.
 - TensorRT engine deserialization and metadata extraction on Jetson linked builds
 - TensorRT one-shot dummy inference on Jetson linked builds
 - TensorRT benchmark runner on Jetson linked builds
+- documented benchmark measurement policy
 
 ## Current Limitations
 
@@ -57,7 +58,7 @@ InferEdgeRuntime v0.1.0 is a validated MVP release.
 - GitHub Actions currently runs default smoke test only
 - ORT linked smoke test remains local/manual because it requires external ONNX Runtime and model files
 
-TensorRT backend execution is planned for Jetson-oriented stages. The current Mac/default build keeps TensorRT as a stub and does not link TensorRT or CUDA. See [docs/tensorrt_backend_plan.md](docs/tensorrt_backend_plan.md) for the Jetson Orin Nano implementation plan.
+TensorRT backend execution is implemented for Jetson-oriented linked builds. The current Mac/default build keeps TensorRT as a stub and does not link TensorRT or CUDA. See [docs/tensorrt_backend_plan.md](docs/tensorrt_backend_plan.md) for the Jetson Orin Nano implementation plan.
 
 ## Requirements
 
@@ -218,6 +219,14 @@ Expected benchmark behavior:
 - `fps_value > 0`
 - `model_metadata.inputs` contains `images`
 - `model_metadata.outputs` contains `output0`
+
+## Benchmark Interpretation
+
+InferEdgeRuntime measures end-to-end inference latency. The reported `latency_ms` values include memory transfer and synchronization overhead in addition to backend execution.
+
+Do not directly compare InferEdgeRuntime TensorRT latency with `trtexec` GPU latency. `trtexec` reports lower-level metrics such as GPU latency, Host latency, enqueue time, and H2D/D2H latency separately. InferEdgeRuntime currently reports a deployment-oriented wall-clock latency, so it is normal for Runtime latency to be larger than `trtexec` GPU latency.
+
+This makes InferEdgeRuntime results more representative of the simple runtime path used for deployment and downstream InferEdgeLab comparison. See [docs/benchmark_policy.md](docs/benchmark_policy.md) for the full measurement policy.
 
 Output modes:
 
@@ -396,6 +405,7 @@ Forge -> Runtime -> Lab flow:
 │   ├── smoke_default.sh
 │   └── smoke_ort.sh
 ├── docs/
+│   ├── benchmark_policy.md
 │   ├── mvp_validation.md
 │   └── tensorrt_backend_plan.md
 ├── examples/
