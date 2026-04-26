@@ -18,6 +18,17 @@
 namespace inferedge_runtime {
 namespace {
 
+struct ManifestConfig {
+    std::string model_path;
+    std::string engine;
+    std::string device;
+    int batch = 0;
+    int height = 0;
+    int width = 0;
+    std::string precision;
+    std::string format;
+};
+
 std::string require_value(int argc, char** argv, int& index, const std::string& option) {
     if (index + 1 >= argc) {
         throw std::invalid_argument("missing value for option: " + option);
@@ -63,6 +74,199 @@ int parse_int_with_minimum(const std::string& value, const std::string& option, 
         throw std::invalid_argument(
             "invalid integer value for option: " + option + " (" + value + ", minimum: " +
             std::to_string(min_value) + ")");
+    }
+}
+
+std::string read_text_file(const std::string& path) {
+    std::ifstream input(path);
+    if (!input) {
+        throw std::runtime_error("manifest file not found: " + path);
+    }
+
+    std::ostringstream buffer;
+    buffer << input.rdbuf();
+    return buffer.str();
+}
+
+std::string find_object_section(const std::string& json, const std::string& key) {
+    const std::string key_pattern = "\"" + key + "\"";
+    const std::size_t key_pos = json.find(key_pattern);
+    if (key_pos == std::string::npos) {
+        return "";
+    }
+
+    const std::size_t colon_pos = json.find(':', key_pos + key_pattern.size());
+    if (colon_pos == std::string::npos) {
+        return "";
+    }
+
+    const std::size_t object_start = json.find('{', colon_pos + 1);
+    if (object_start == std::string::npos) {
+        return "";
+    }
+
+    int depth = 0;
+    bool in_string = false;
+    bool escaped = false;
+    for (std::size_t i = object_start; i < json.size(); ++i) {
+        const char ch = json[i];
+        if (in_string) {
+            if (escaped) {
+                escaped = false;
+            } else if (ch == '\\') {
+                escaped = true;
+            } else if (ch == '"') {
+                in_string = false;
+            }
+            continue;
+        }
+
+        if (ch == '"') {
+            in_string = true;
+        } else if (ch == '{') {
+            ++depth;
+        } else if (ch == '}') {
+            --depth;
+            if (depth == 0) {
+                return json.substr(object_start, i - object_start + 1);
+            }
+        }
+    }
+
+    return "";
+}
+
+std::string extract_json_string_value(const std::string& section, const std::string& key) {
+    const std::string key_pattern = "\"" + key + "\"";
+    const std::size_t key_pos = section.find(key_pattern);
+    if (key_pos == std::string::npos) {
+        return "";
+    }
+
+    const std::size_t colon_pos = section.find(':', key_pos + key_pattern.size());
+    if (colon_pos == std::string::npos) {
+        return "";
+    }
+
+    const std::size_t value_start = section.find('"', colon_pos + 1);
+    if (value_start == std::string::npos) {
+        return "";
+    }
+
+    std::string value;
+    bool escaped = false;
+    for (std::size_t i = value_start + 1; i < section.size(); ++i) {
+        const char ch = section[i];
+        if (escaped) {
+            switch (ch) {
+                case '"':
+                    value.push_back('"');
+                    break;
+                case '\\':
+                    value.push_back('\\');
+                    break;
+                case 'n':
+                    value.push_back('\n');
+                    break;
+                case 'r':
+                    value.push_back('\r');
+                    break;
+                case 't':
+                    value.push_back('\t');
+                    break;
+                default:
+                    value.push_back(ch);
+                    break;
+            }
+            escaped = false;
+        } else if (ch == '\\') {
+            escaped = true;
+        } else if (ch == '"') {
+            return value;
+        } else {
+            value.push_back(ch);
+        }
+    }
+
+    return "";
+}
+
+int extract_json_int_value(const std::string& section, const std::string& key) {
+    const std::string key_pattern = "\"" + key + "\"";
+    const std::size_t key_pos = section.find(key_pattern);
+    if (key_pos == std::string::npos) {
+        return 0;
+    }
+
+    const std::size_t colon_pos = section.find(':', key_pos + key_pattern.size());
+    if (colon_pos == std::string::npos) {
+        return 0;
+    }
+
+    std::size_t value_start = colon_pos + 1;
+    while (value_start < section.size() && std::isspace(static_cast<unsigned char>(section[value_start]))) {
+        ++value_start;
+    }
+
+    std::size_t value_end = value_start;
+    if (value_end < section.size() && (section[value_end] == '-' || section[value_end] == '+')) {
+        ++value_end;
+    }
+    while (value_end < section.size() && std::isdigit(static_cast<unsigned char>(section[value_end]))) {
+        ++value_end;
+    }
+
+    if (value_end == value_start) {
+        return 0;
+    }
+
+    try {
+        return std::stoi(section.substr(value_start, value_end - value_start));
+    } catch (const std::exception&) {
+        return 0;
+    }
+}
+
+ManifestConfig load_manifest_config(const std::string& path) {
+    ManifestConfig manifest;
+    if (path.empty()) {
+        return manifest;
+    }
+
+    const std::string json = read_text_file(path);
+    const std::string artifact = find_object_section(json, "artifact");
+    const std::string runtime = find_object_section(json, "runtime");
+
+    manifest.model_path = extract_json_string_value(artifact, "model_path");
+    manifest.precision = extract_json_string_value(artifact, "precision");
+    manifest.format = extract_json_string_value(artifact, "format");
+    manifest.engine = extract_json_string_value(runtime, "engine");
+    manifest.device = extract_json_string_value(runtime, "device");
+    manifest.batch = extract_json_int_value(runtime, "batch");
+    manifest.height = extract_json_int_value(runtime, "height");
+    manifest.width = extract_json_int_value(runtime, "width");
+
+    return manifest;
+}
+
+void apply_manifest_defaults(RuntimeConfig& config, const ManifestConfig& manifest) {
+    if (!config.model_path_overridden && !manifest.model_path.empty()) {
+        config.model_path = manifest.model_path;
+    }
+    if (!config.engine_overridden && !manifest.engine.empty()) {
+        config.engine = manifest.engine;
+    }
+    if (!config.device_overridden && !manifest.device.empty()) {
+        config.device = manifest.device;
+    }
+    if (!config.batch_overridden && manifest.batch > 0) {
+        config.batch = manifest.batch;
+    }
+    if (!config.height_overridden && manifest.height > 0) {
+        config.height = manifest.height;
+    }
+    if (!config.width_overridden && manifest.width > 0) {
+        config.width = manifest.width;
     }
 }
 
@@ -293,6 +497,7 @@ std::filesystem::path write_result_json(
         << "{\n"
         << "  \"schema_version\": \"inferedge-runtime-result-v1\",\n"
         << "  \"manifest_path\": " << json_string(config.manifest_path) << ",\n"
+        << "  \"manifest_applied\": " << (config.manifest_applied ? "true" : "false") << ",\n"
         << "  \"model_name\": " << json_string(model_name) << ",\n"
         << "  \"model_path\": " << json_string(config.model_path) << ",\n"
         << "  \"engine_name\": " << json_string(engine_metadata.name) << ",\n"
@@ -328,7 +533,8 @@ std::filesystem::path write_result_json(
         << "    \"width\": " << config.width << ",\n"
         << "    \"warmup\": " << config.warmup << ",\n"
         << "    \"runs\": " << config.runs << ",\n"
-        << "    \"manifest_path\": " << json_string(config.manifest_path) << "\n"
+        << "    \"manifest_path\": " << json_string(config.manifest_path) << ",\n"
+        << "    \"manifest_applied\": " << (config.manifest_applied ? "true" : "false") << "\n"
         << "  },\n"
         << "  \"latency_ms\": {\n"
         << "    \"mean\": " << benchmark_result.mean_ms << ",\n"
@@ -369,7 +575,9 @@ std::filesystem::path write_result_json(
         << "    \"json_export\": \"enabled\",\n"
         << "    \"output_mode\": " << json_string(output_mode) << ",\n"
         << "    \"latest_path\": \"results/latest.json\",\n"
-        << "    \"manifest_recorded\": " << (config.manifest_path.empty() ? "false" : "true") << "\n"
+        << "    \"manifest_recorded\": " << (config.manifest_path.empty() ? "false" : "true") << ",\n"
+        << "    \"manifest_precision\": " << json_string(config.manifest_precision) << ",\n"
+        << "    \"manifest_format\": " << json_string(config.manifest_format) << "\n"
         << "  }\n"
         << "}\n";
 
@@ -394,7 +602,7 @@ void print_help() {
         << "Options:\n"
         << "  -h, --help             Show this help message\n"
         << "  --version              Show version information\n"
-        << "  --manifest <path>      Optional Forge/build manifest path recorded in result JSON\n"
+        << "  --manifest <path>      Optional Forge/build manifest path used for default runtime config\n"
         << "  --model <path>         Path to an input model file\n"
         << "  --engine <name>        Runtime engine name (supported: onnxruntime, ort; default: onnxruntime)\n"
         << "  --device <name>        Target device name (supported: cpu; default: cpu)\n"
@@ -424,18 +632,24 @@ RuntimeConfig parse_args(int argc, char** argv) {
             config.manifest_path = require_value(argc, argv, i, option);
         } else if (option == "--model") {
             config.model_path = require_value(argc, argv, i, option);
+            config.model_path_overridden = true;
         } else if (option == "--engine") {
             config.engine = require_value(argc, argv, i, option);
+            config.engine_overridden = true;
             validate_engine(config.engine);
         } else if (option == "--device") {
             config.device = require_value(argc, argv, i, option);
+            config.device_overridden = true;
             validate_device(config.device);
         } else if (option == "--batch") {
             config.batch = parse_int_with_minimum(require_value(argc, argv, i, option), option, 1);
+            config.batch_overridden = true;
         } else if (option == "--height") {
             config.height = parse_int_with_minimum(require_value(argc, argv, i, option), option, 1);
+            config.height_overridden = true;
         } else if (option == "--width") {
             config.width = parse_int_with_minimum(require_value(argc, argv, i, option), option, 1);
+            config.width_overridden = true;
         } else if (option == "--warmup") {
             config.warmup = parse_int_with_minimum(require_value(argc, argv, i, option), option, 0);
         } else if (option == "--runs") {
@@ -445,6 +659,14 @@ RuntimeConfig parse_args(int argc, char** argv) {
         } else {
             throw std::invalid_argument("unknown option: " + option);
         }
+    }
+
+    if (!config.manifest_path.empty()) {
+        const ManifestConfig manifest = load_manifest_config(config.manifest_path);
+        apply_manifest_defaults(config, manifest);
+        config.manifest_precision = manifest.precision;
+        config.manifest_format = manifest.format;
+        config.manifest_applied = true;
     }
 
     validate_engine(config.engine);
@@ -467,6 +689,7 @@ int run_cli(const RuntimeConfig& config) {
     std::cout
         << "InferEdgeRuntime benchmark configuration\n"
         << "  manifest: " << (config.manifest_path.empty() ? "none" : config.manifest_path) << '\n'
+        << "  manifest_applied: " << (config.manifest_applied ? "true" : "false") << '\n'
         << "  model:  " << config.model_path << '\n'
         << "  engine: " << config.engine << '\n'
         << "  device: " << config.device << '\n'

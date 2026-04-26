@@ -6,6 +6,8 @@ namespace inferedge_runtime {
 
 struct RuntimeConfig {
     std::string manifest_path;
+    std::string manifest_precision;
+    std::string manifest_format;
     std::string model_path;
     std::string engine = "onnxruntime";
     std::string device = "cpu";
@@ -15,6 +17,13 @@ struct RuntimeConfig {
     int warmup = 5;
     int runs = 50;
     std::string output_path = "results/runtime_result.json";
+    bool manifest_applied = false;
+    bool model_path_overridden = false;
+    bool engine_overridden = false;
+    bool device_overridden = false;
+    bool batch_overridden = false;
+    bool height_overridden = false;
+    bool width_overridden = false;
     bool show_help = false;
     bool show_version = false;
 };
