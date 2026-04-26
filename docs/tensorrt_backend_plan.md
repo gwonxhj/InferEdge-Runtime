@@ -57,15 +57,20 @@ Optional future helpers:
 
 TensorRT support should be explicitly enabled in a Jetson-oriented build. The default build must remain dependency-free, and the Mac default build must keep the TensorRT stub.
 
-Planned CMake options:
+Implemented CMake options:
 
 - `INFEREDGE_ENABLE_TENSORRT`
 - `INFEREDGE_TENSORRT_ROOT`
-- `INFEREDGE_CUDA_ROOT` if needed
+- `INFEREDGE_CUDA_ROOT`
 
 Expected CMake policy:
 
-- If `INFEREDGE_ENABLE_TENSORRT=ON` and TensorRT headers/libs are missing, configure should fail with a clear error.
+- If `INFEREDGE_ENABLE_TENSORRT=ON` and TensorRT/CUDA headers/libs are missing, configure fails with a clear error.
+- Jetson default paths are supported first:
+  - `/usr/include/aarch64-linux-gnu`
+  - `/usr/lib/aarch64-linux-gnu`
+  - `/usr/local/cuda/include`
+  - `/usr/local/cuda/lib64`
 - TensorRT and CUDA files must not be vendored into this repository.
 - Jetson builds enable TensorRT explicitly.
 - Mac builds keep the TensorRT stub unless a future supported TensorRT environment is intentionally configured.
@@ -134,7 +139,7 @@ TensorRT implementation errors should be explicit and actionable. Example messag
 ## Implementation Milestones
 
 - [x] TensorRT backend stub
-- [ ] Add TensorRT CMake option and link validation
+- [x] Add TensorRT CMake option and link validation
 - [ ] Add TensorRT pImpl runtime holder
 - [ ] Load serialized `.engine` file
 - [ ] Deserialize `ICudaEngine`

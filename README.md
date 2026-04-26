@@ -62,6 +62,13 @@ TensorRT backend execution is planned for Jetson-oriented stages. The current Ma
 - C++17 compiler
 - Optional: ONNX Runtime C/C++ package
 - Apple Silicon users should use the `osx-arm64` ONNX Runtime package
+- Optional for Jetson TensorRT link validation:
+  - Jetson Orin Nano
+  - TensorRT 10.x
+  - CUDA runtime
+  - `NvInfer.h`
+  - `libnvinfer.so`
+  - `libcudart.so`
 
 ## Smoke Test Scripts
 
@@ -177,10 +184,20 @@ CLI notes:
 TensorRT stub example:
 
 ```bash
-./build/inferedge-runtime --model models/sample.engine --engine tensorrt --device cpu --batch 1 --height 224 --width 224 --warmup 1 --runs 1 --output results/tensorrt_stub.json
+./build/inferedge-runtime --model models/sample.engine --engine tensorrt --device jetson --batch 1 --height 640 --width 640 --warmup 1 --runs 1 --output results/tensorrt_stub.json
 ```
 
-This command does not execute TensorRT. It creates backend metadata and a skipped benchmark JSON result. Real TensorRT engine loading and execution are planned for the Jetson backend stage.
+This command does not execute TensorRT. In the default build, the TensorRT stub reports `available=false` and creates a skipped benchmark JSON result.
+
+Jetson TensorRT link validation build:
+
+```bash
+cmake -S . -B build-trt -DINFEREDGE_ENABLE_TENSORRT=ON
+cmake --build build-trt
+./build-trt/inferedge-runtime --model /home/risenano01/InferEdgeForge/builds/yolov8n__jetson__tensorrt__jetson_fp16/model.engine --engine tensorrt --device jetson --batch 1 --height 640 --width 640 --warmup 1 --runs 1 --output results/tensorrt_link_check.json
+```
+
+When TensorRT and CUDA headers/libraries are found, the TensorRT backend reports `available=true`. Engine deserialization, CUDA buffer allocation, and inference execution are still not implemented, so the benchmark is recorded as skipped with a clear not-implemented message. Real TensorRT engine loading and execution are planned for the Jetson backend stage.
 
 Output modes:
 
@@ -386,7 +403,10 @@ Forge -> Runtime -> Lab flow:
 - [ ] Robust manifest parser or external JSON dependency decision
 - [x] TensorRT backend stub
 - [x] TensorRT backend implementation plan
-- [ ] TensorRT engine loading on Jetson
+- [x] TensorRT CMake link validation
+- [ ] TensorRT engine deserialization on Jetson
+- [ ] TensorRT metadata extraction
+- [ ] TensorRT one-shot inference
 - [ ] TensorRT benchmark runner on Jetson
 - [ ] InferEdgeLab direct import workflow
 
