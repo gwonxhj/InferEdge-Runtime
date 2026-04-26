@@ -1,6 +1,6 @@
 # Tests
 
-InferEdgeRuntime does not have a GitHub Actions CI suite yet. Use the scripted smoke tests first, then fall back to the manual checklist when debugging a specific failure.
+InferEdgeRuntime has a GitHub Actions default smoke workflow. Use the scripted smoke tests locally first, then fall back to the manual checklist when debugging a specific failure.
 
 ## Recommended Smoke Scripts
 
@@ -81,6 +81,25 @@ Expected:
 
 - command exits non-zero
 - stderr includes `minimum: 1`
+
+## Manifest Path Recording Smoke Test
+
+```bash
+./build/inferedge-runtime --manifest examples/manifest.sample.json --model models/sample.onnx --engine onnxruntime --device cpu --batch 1 --height 224 --width 224 --warmup 1 --runs 1 --output results/manifest_sample_smoke.json
+```
+
+```bash
+python3 - <<'PY'
+import json
+from pathlib import Path
+
+data = json.loads(Path("results/manifest_sample_smoke.json").read_text())
+assert data["manifest_path"] == "examples/manifest.sample.json"
+assert data["run_config"]["manifest_path"] == "examples/manifest.sample.json"
+assert data["extra"]["manifest_recorded"] is True
+print("manifest sample smoke ok")
+PY
+```
 
 ## JSON Validity Test
 

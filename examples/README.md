@@ -42,12 +42,36 @@ Expected result:
 python3 -m json.tool results/ort_cpu.json > /tmp/ort_cpu_pretty.json
 ```
 
+## Manifest Example
+
+`examples/manifest.sample.json` is a draft Forge handoff schema example. It describes the kind of artifact and runtime metadata that Forge or another build stage may pass to Runtime later.
+
+Current behavior:
+
+- Runtime does not parse this file yet.
+- Runtime does not auto-apply manifest values to `RuntimeConfig` yet.
+- Passing `--manifest` records the path in `manifest_path`, `run_config.manifest_path`, and `extra.manifest_recorded`.
+
+Default build example:
+
+```bash
+./build/inferedge-runtime --manifest examples/manifest.sample.json --model models/sample.onnx --engine onnxruntime --device cpu --batch 1 --height 224 --width 224 --warmup 1 --runs 1 --output auto
+```
+
+Inspect the latest result:
+
+```bash
+python3 -m json.tool results/latest.json > /tmp/latest_manifest_pretty.json
+```
+
 ## Example JSON Fields
 
 Nested fields for detailed reporting:
 
+- `manifest_path`
 - `model.path`
 - `engine.backend`
+- `run_config.manifest_path`
 - `run_config.runs`
 - `latency_ms.mean`
 - `latency_ms.samples`
