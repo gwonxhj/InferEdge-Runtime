@@ -18,6 +18,7 @@ public:
     ModelMetadata model_metadata() const override;
     void load_model(const std::string& model_path) override;
     void run_once() override;
+    BenchmarkResult benchmark(int warmup, int runs) override;
 
 private:
     std::unique_ptr<OnnxRuntimeEngineImpl> impl_;

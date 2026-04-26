@@ -3,6 +3,7 @@
 #include "inferedge_runtime/engine.hpp"
 #include "inferedge_runtime/version.hpp"
 
+#include <iomanip>
 #include <iostream>
 #include <sstream>
 #include <stdexcept>
@@ -192,19 +193,30 @@ int run_cli(const RuntimeConfig& config) {
     std::cout << "  outputs:";
     print_tensor_metadata_list(model_metadata.outputs);
 
-    std::cout << "\nInference\n";
+    std::cout << "\nBenchmark\n";
     if (metadata.available) {
-        engine->run_once();
+        const BenchmarkResult result = engine->benchmark(config.warmup, config.runs);
         std::cout
             << "  status: success\n"
-            << "  runs: 1\n";
+            << "  warmup: " << result.warmup_runs << '\n'
+            << "  runs: " << result.timed_runs << '\n'
+            << std::fixed << std::setprecision(3)
+            << "  latency_ms:\n"
+            << "    mean: " << result.mean_ms << '\n'
+            << "    min: " << result.min_ms << '\n'
+            << "    max: " << result.max_ms << '\n'
+            << "    std: " << result.std_ms << '\n'
+            << "    p50: " << result.p50_ms << '\n'
+            << "    p90: " << result.p90_ms << '\n'
+            << "    p99: " << result.p99_ms << '\n'
+            << "  fps: " << result.fps << '\n';
     } else {
         std::cout
             << "  status: skipped\n"
             << "  reason: backend is not available in this build\n";
     }
 
-    std::cout << "\nBenchmark loops, latency statistics, FPS calculation, and JSON export are not implemented yet.\n";
+    std::cout << "\nJSON export is not implemented yet.\n";
 
     return 0;
 }
