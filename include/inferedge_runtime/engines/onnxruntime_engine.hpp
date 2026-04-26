@@ -2,13 +2,17 @@
 
 #include "inferedge_runtime/engine.hpp"
 
+#include <memory>
 #include <string>
 
 namespace inferedge_runtime {
 
+struct OnnxRuntimeEngineImpl;
+
 class OnnxRuntimeEngine final : public IInferenceEngine {
 public:
     explicit OnnxRuntimeEngine(RuntimeConfig config);
+    ~OnnxRuntimeEngine() override;
 
     EngineMetadata metadata() const override;
     ModelMetadata model_metadata() const override;
@@ -16,9 +20,7 @@ public:
     void run_once() override;
 
 private:
-    RuntimeConfig config_;
-    std::string loaded_model_path_;
-    ModelMetadata model_metadata_;
+    std::unique_ptr<OnnxRuntimeEngineImpl> impl_;
 };
 
 }  // namespace inferedge_runtime

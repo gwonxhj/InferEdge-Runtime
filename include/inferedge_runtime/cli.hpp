@@ -8,6 +8,9 @@ struct RuntimeConfig {
     std::string model_path;
     std::string engine = "onnxruntime";
     std::string device = "cpu";
+    int batch = 1;
+    int height = 224;
+    int width = 224;
     int warmup = 5;
     int runs = 50;
     std::string output_path = "results/runtime_result.json";

@@ -103,6 +103,9 @@ void print_help() {
         << "  --model <path>         Path to an input model file\n"
         << "  --engine <name>        Runtime engine name (supported: onnxruntime, ort; default: onnxruntime)\n"
         << "  --device <name>        Target device name (supported: cpu; default: cpu)\n"
+        << "  --batch <n>            Dummy input batch size, n >= 1 (default: 1)\n"
+        << "  --height <n>           Dummy input height, n >= 1 (default: 224)\n"
+        << "  --width <n>            Dummy input width, n >= 1 (default: 224)\n"
         << "  --warmup <n>           Number of warmup runs, n >= 0 (default: 5)\n"
         << "  --runs <n>             Number of benchmark runs, n >= 1 (default: 50)\n"
         << "  --output <path>        Output result path (default: results/runtime_result.json)\n";
@@ -130,6 +133,12 @@ RuntimeConfig parse_args(int argc, char** argv) {
         } else if (option == "--device") {
             config.device = require_value(argc, argv, i, option);
             validate_device(config.device);
+        } else if (option == "--batch") {
+            config.batch = parse_int_with_minimum(require_value(argc, argv, i, option), option, 1);
+        } else if (option == "--height") {
+            config.height = parse_int_with_minimum(require_value(argc, argv, i, option), option, 1);
+        } else if (option == "--width") {
+            config.width = parse_int_with_minimum(require_value(argc, argv, i, option), option, 1);
         } else if (option == "--warmup") {
             config.warmup = parse_int_with_minimum(require_value(argc, argv, i, option), option, 0);
         } else if (option == "--runs") {
@@ -163,6 +172,9 @@ int run_cli(const RuntimeConfig& config) {
         << "  model:  " << config.model_path << '\n'
         << "  engine: " << config.engine << '\n'
         << "  device: " << config.device << '\n'
+        << "  batch:  " << config.batch << '\n'
+        << "  height: " << config.height << '\n'
+        << "  width:  " << config.width << '\n'
         << "  warmup: " << config.warmup << '\n'
         << "  runs:   " << config.runs << '\n'
         << "  output: " << config.output_path << '\n'
@@ -179,9 +191,20 @@ int run_cli(const RuntimeConfig& config) {
     print_tensor_metadata_list(model_metadata.inputs);
     std::cout << "  outputs:";
     print_tensor_metadata_list(model_metadata.outputs);
-    std::cout
-        << "\n"
-        << "Inference execution is not implemented yet. This command currently validates CLI, backend availability, and model metadata loading.\n";
+
+    std::cout << "\nInference\n";
+    if (metadata.available) {
+        engine->run_once();
+        std::cout
+            << "  status: success\n"
+            << "  runs: 1\n";
+    } else {
+        std::cout
+            << "  status: skipped\n"
+            << "  reason: backend is not available in this build\n";
+    }
+
+    std::cout << "\nBenchmark loops, latency statistics, FPS calculation, and JSON export are not implemented yet.\n";
 
     return 0;
 }
