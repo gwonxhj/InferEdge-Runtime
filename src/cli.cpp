@@ -1,5 +1,6 @@
 #include "inferedge_runtime/cli.hpp"
 
+#include "inferedge_runtime/engine.hpp"
 #include "inferedge_runtime/version.hpp"
 
 #include <iostream>
@@ -129,7 +130,20 @@ int run_cli(const RuntimeConfig& config) {
         << "  device: " << config.device << '\n'
         << "  warmup: " << config.warmup << '\n'
         << "  runs:   " << config.runs << '\n'
-        << "  output: " << config.output_path << '\n'
+        << "  output: " << config.output_path << '\n';
+
+    const std::unique_ptr<IInferenceEngine> engine = create_engine(config);
+    engine->load_model(config.model_path);
+    const EngineMetadata metadata = engine->metadata();
+
+    std::cout
+        << "\n"
+        << "Engine metadata\n"
+        << "  name:      " << metadata.name << '\n'
+        << "  backend:   " << metadata.backend << '\n'
+        << "  device:    " << metadata.device << '\n'
+        << "  available: " << (metadata.available ? "true" : "false") << '\n'
+        << "  status:    " << metadata.status_message << '\n'
         << "\n"
         << "Inference execution is not implemented yet.\n";
 
