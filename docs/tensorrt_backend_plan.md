@@ -13,12 +13,12 @@ On Mac development environments, InferEdgeRuntime should continue to avoid Tenso
 - `--engine tensorrt` and `--engine trt` are accepted by the CLI.
 - Mac/default TensorRT stub metadata reports `available=false`.
 - Jetson linked TensorRT metadata reports `available=true`.
-- TensorRT benchmark execution still produces skipped JSON results instead of attempting TensorRT inference.
+- TensorRT benchmark execution produces real latency/FPS JSON results on Jetson linked builds.
 
 Progress note:
 
 - TensorRT linked builds can now deserialize `.engine` files, extract metadata, allocate float32 dummy buffers, and run one-shot inference.
-- Benchmark timing remains future work.
+- TensorRT linked builds can now produce real benchmark JSON from Forge-generated `.engine` files on Jetson.
 
 ## Target Runtime Flow
 
@@ -153,7 +153,9 @@ TensorRT implementation errors should be explicit and actionable. Example messag
 - [x] Extract binding/tensor metadata
 - [x] Allocate buffers
 - [x] Run one-shot inference
-- [ ] Reuse benchmark runner
-- [ ] Export TensorRT benchmark JSON
+- [x] Reuse benchmark runner
+- [x] Export TensorRT benchmark JSON
 - [ ] Validate on Jetson Orin Nano
 - [ ] Compare TensorRT result in InferEdgeLab
+- [ ] Output post-processing
+- [ ] Lab comparison workflow

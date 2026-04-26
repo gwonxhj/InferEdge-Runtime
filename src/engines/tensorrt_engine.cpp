@@ -1,6 +1,8 @@
 #include "inferedge_runtime/engines/tensorrt_engine.hpp"
 
 #include <algorithm>
+#include <chrono>
+#include <cmath>
 #include <cstddef>
 #include <filesystem>
 #include <fstream>
@@ -210,6 +212,20 @@ void release_buffers(std::vector<TensorRTBuffer>& buffers) {
     }
     buffers.clear();
 }
+
+double percentile_nearest_rank(std::vector<double> sorted_samples, double percentile) {
+    if (sorted_samples.empty()) {
+        return 0.0;
+    }
+
+    std::sort(sorted_samples.begin(), sorted_samples.end());
+    const double rank = percentile / 100.0 * static_cast<double>(sorted_samples.size());
+    std::size_t index = static_cast<std::size_t>(std::ceil(rank));
+    if (index == 0) {
+        index = 1;
+    }
+    return sorted_samples[index - 1];
+}
 #endif
 
 }  // namespace
@@ -269,6 +285,55 @@ void prepare_buffers(TensorRTEngineImpl& impl) {
         throw std::runtime_error("TensorRT buffer preparation failed: no tensors");
     }
 }
+
+void execute_once(TensorRTEngineImpl& impl) {
+    if (!impl.context) {
+        throw std::runtime_error("TensorRT model is not loaded");
+    }
+
+    if (impl.buffers.empty()) {
+        prepare_buffers(impl);
+    }
+
+    CudaStreamGuard stream;
+
+    for (TensorRTBuffer& buffer : impl.buffers) {
+        if (buffer.is_input) {
+            std::fill(buffer.host_float_buffer.begin(), buffer.host_float_buffer.end(), 0.0F);
+            check_cuda(
+                cudaMemcpyAsync(
+                    buffer.device_buffer,
+                    buffer.host_float_buffer.data(),
+                    buffer.byte_size,
+                    cudaMemcpyHostToDevice,
+                    stream.stream),
+                "Failed to copy TensorRT input to device: " + buffer.name);
+        }
+
+        if (!impl.context->setTensorAddress(buffer.name.c_str(), buffer.device_buffer)) {
+            throw std::runtime_error("Failed to set TensorRT tensor address: " + buffer.name);
+        }
+    }
+
+    if (!impl.context->enqueueV3(stream.stream)) {
+        throw std::runtime_error("Failed to enqueue TensorRT inference");
+    }
+
+    for (TensorRTBuffer& buffer : impl.buffers) {
+        if (!buffer.is_input) {
+            check_cuda(
+                cudaMemcpyAsync(
+                    buffer.host_float_buffer.data(),
+                    buffer.device_buffer,
+                    buffer.byte_size,
+                    cudaMemcpyDeviceToHost,
+                    stream.stream),
+                "Failed to copy TensorRT output to host: " + buffer.name);
+        }
+    }
+
+    check_cuda(cudaStreamSynchronize(stream.stream), "Failed to synchronize TensorRT inference stream");
+}
 #endif
 
 TensorRTEngine::TensorRTEngine(RuntimeConfig config)
@@ -283,7 +348,8 @@ EngineMetadata TensorRTEngine::metadata() const {
     metadata.device = impl_->config.device;
 #ifdef INFEREDGE_TENSORRT_LINKED
     metadata.available = true;
-    metadata.status_message = "TensorRT backend is linked. Engine metadata loading and one-shot inference are available.";
+    metadata.status_message =
+        "TensorRT backend is linked. Engine metadata, one-shot inference, and benchmark execution are available.";
 #else
     metadata.available = false;
     metadata.status_message = "TensorRT backend is not implemented in this build. This stub prepares Jetson integration.";
@@ -325,63 +391,72 @@ void TensorRTEngine::load_model(const std::string& model_path) {
 
 void TensorRTEngine::run_once() {
 #ifdef INFEREDGE_TENSORRT_LINKED
-    if (!impl_->context) {
-        throw std::runtime_error("TensorRT model is not loaded");
-    }
-
-    if (impl_->buffers.empty()) {
-        prepare_buffers(*impl_);
-    }
-
-    CudaStreamGuard stream;
-
-    for (TensorRTBuffer& buffer : impl_->buffers) {
-        if (buffer.is_input) {
-            std::fill(buffer.host_float_buffer.begin(), buffer.host_float_buffer.end(), 0.0F);
-            check_cuda(
-                cudaMemcpyAsync(
-                    buffer.device_buffer,
-                    buffer.host_float_buffer.data(),
-                    buffer.byte_size,
-                    cudaMemcpyHostToDevice,
-                    stream.stream),
-                "Failed to copy TensorRT input to device: " + buffer.name);
-        }
-
-        if (!impl_->context->setTensorAddress(buffer.name.c_str(), buffer.device_buffer)) {
-            throw std::runtime_error("Failed to set TensorRT tensor address: " + buffer.name);
-        }
-    }
-
-    if (!impl_->context->enqueueV3(stream.stream)) {
-        throw std::runtime_error("Failed to enqueue TensorRT inference");
-    }
-
-    for (TensorRTBuffer& buffer : impl_->buffers) {
-        if (!buffer.is_input) {
-            check_cuda(
-                cudaMemcpyAsync(
-                    buffer.host_float_buffer.data(),
-                    buffer.device_buffer,
-                    buffer.byte_size,
-                    cudaMemcpyDeviceToHost,
-                    stream.stream),
-                "Failed to copy TensorRT output to host: " + buffer.name);
-        }
-    }
-
-    check_cuda(cudaStreamSynchronize(stream.stream), "Failed to synchronize TensorRT inference stream");
+    execute_once(*impl_);
 #else
     throw std::runtime_error("TensorRT backend is not enabled in this build");
 #endif
 }
 
 BenchmarkResult TensorRTEngine::benchmark(int warmup, int runs) {
+#ifdef INFEREDGE_TENSORRT_LINKED
+    if (!impl_->context) {
+        throw std::runtime_error("TensorRT model is not loaded");
+    }
+
+    if (warmup < 0) {
+        throw std::runtime_error("warmup must be greater than or equal to 0");
+    }
+
+    if (runs < 1) {
+        throw std::runtime_error("runs must be greater than or equal to 1");
+    }
+
+    for (int i = 0; i < warmup; ++i) {
+        execute_once(*impl_);
+    }
+
+    BenchmarkResult result;
+    result.success = true;
+    result.status = "success";
+    result.message = "benchmark completed";
+    result.warmup_runs = warmup;
+    result.timed_runs = runs;
+    result.samples_ms.reserve(static_cast<std::size_t>(runs));
+
+    for (int i = 0; i < runs; ++i) {
+        const auto start = std::chrono::steady_clock::now();
+        execute_once(*impl_);
+        const auto end = std::chrono::steady_clock::now();
+        const std::chrono::duration<double, std::milli> elapsed = end - start;
+        result.samples_ms.push_back(elapsed.count());
+    }
+
+    const auto minmax = std::minmax_element(result.samples_ms.begin(), result.samples_ms.end());
+    result.min_ms = *minmax.first;
+    result.max_ms = *minmax.second;
+    result.mean_ms =
+        std::accumulate(result.samples_ms.begin(), result.samples_ms.end(), 0.0) /
+        static_cast<double>(result.samples_ms.size());
+
+    double variance = 0.0;
+    for (const double sample : result.samples_ms) {
+        const double diff = sample - result.mean_ms;
+        variance += diff * diff;
+    }
+    variance /= static_cast<double>(result.samples_ms.size());
+    result.std_ms = std::sqrt(variance);
+
+    std::vector<double> sorted_samples = result.samples_ms;
+    std::sort(sorted_samples.begin(), sorted_samples.end());
+    result.p50_ms = percentile_nearest_rank(sorted_samples, 50.0);
+    result.p90_ms = percentile_nearest_rank(sorted_samples, 90.0);
+    result.p99_ms = percentile_nearest_rank(sorted_samples, 99.0);
+    result.fps = result.mean_ms > 0.0 ? 1000.0 / result.mean_ms : 0.0;
+
+    return result;
+#else
     (void)warmup;
     (void)runs;
-#ifdef INFEREDGE_TENSORRT_LINKED
-    throw std::runtime_error("TensorRT backend is linked, but benchmark execution is not implemented yet");
-#else
     throw std::runtime_error("TensorRT backend is not enabled in this build");
 #endif
 }
