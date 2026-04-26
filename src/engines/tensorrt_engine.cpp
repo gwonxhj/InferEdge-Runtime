@@ -1,9 +1,13 @@
 #include "inferedge_runtime/engines/tensorrt_engine.hpp"
 
+#include <algorithm>
+#include <cstddef>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <limits>
 #include <memory>
+#include <numeric>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -12,6 +16,7 @@
 #ifdef INFEREDGE_TENSORRT_LINKED
 #include <NvInfer.h>
 #include <NvInferRuntime.h>
+#include <cuda_runtime_api.h>
 #endif
 
 namespace inferedge_runtime {
@@ -36,6 +41,47 @@ struct TensorRTDeleter {
 
 using RuntimePtr = std::unique_ptr<nvinfer1::IRuntime, TensorRTDeleter<nvinfer1::IRuntime>>;
 using EnginePtr = std::unique_ptr<nvinfer1::ICudaEngine, TensorRTDeleter<nvinfer1::ICudaEngine>>;
+using ContextPtr = std::unique_ptr<nvinfer1::IExecutionContext, TensorRTDeleter<nvinfer1::IExecutionContext>>;
+
+struct TensorRTBuffer {
+    std::string name;
+    bool is_input = false;
+    std::string element_type;
+    std::vector<int64_t> shape;
+    std::size_t element_count = 0;
+    std::size_t byte_size = 0;
+    std::vector<float> host_float_buffer;
+    void* device_buffer = nullptr;
+};
+
+struct CudaStreamGuard {
+    CudaStreamGuard() {
+        check(cudaStreamCreate(&stream), "Failed to create CUDA stream");
+    }
+
+    ~CudaStreamGuard() {
+        if (stream != nullptr) {
+            cudaStreamDestroy(stream);
+        }
+    }
+
+    CudaStreamGuard(const CudaStreamGuard&) = delete;
+    CudaStreamGuard& operator=(const CudaStreamGuard&) = delete;
+
+    static void check(cudaError_t status, const std::string& message) {
+        if (status != cudaSuccess) {
+            throw std::runtime_error(message + ": " + cudaGetErrorString(status));
+        }
+    }
+
+    cudaStream_t stream = nullptr;
+};
+
+void check_cuda(cudaError_t status, const std::string& message) {
+    if (status != cudaSuccess) {
+        throw std::runtime_error(message + ": " + cudaGetErrorString(status));
+    }
+}
 
 std::vector<char> read_binary_file(const std::string& path) {
     if (!std::filesystem::exists(path)) {
@@ -121,6 +167,49 @@ ModelMetadata extract_model_metadata(const nvinfer1::ICudaEngine& engine) {
 
     return metadata;
 }
+
+std::size_t tensor_element_count(const std::vector<int64_t>& shape) {
+    if (shape.empty()) {
+        throw std::runtime_error("TensorRT tensor shape is empty");
+    }
+
+    std::size_t count = 1;
+    for (const int64_t dim : shape) {
+        if (dim <= 0) {
+            throw std::runtime_error("TensorRT one-shot inference currently requires static tensor shapes");
+        }
+
+        const auto dimension = static_cast<std::size_t>(dim);
+        if (count > std::numeric_limits<std::size_t>::max() / dimension) {
+            throw std::runtime_error("TensorRT tensor element count overflow");
+        }
+        count *= dimension;
+    }
+
+    return count;
+}
+
+std::size_t tensor_byte_size(const TensorMetadata& tensor, std::size_t element_count) {
+    if (tensor.element_type != "float32") {
+        throw std::runtime_error("TensorRT one-shot inference currently supports float32 tensors only: " + tensor.name);
+    }
+
+    if (element_count > std::numeric_limits<std::size_t>::max() / sizeof(float)) {
+        throw std::runtime_error("TensorRT tensor byte size overflow: " + tensor.name);
+    }
+
+    return element_count * sizeof(float);
+}
+
+void release_buffers(std::vector<TensorRTBuffer>& buffers) {
+    for (TensorRTBuffer& buffer : buffers) {
+        if (buffer.device_buffer != nullptr) {
+            cudaFree(buffer.device_buffer);
+            buffer.device_buffer = nullptr;
+        }
+    }
+    buffers.clear();
+}
 #endif
 
 }  // namespace
@@ -133,11 +222,54 @@ struct TensorRTEngineImpl {
     ModelMetadata model_metadata;
 
 #ifdef INFEREDGE_TENSORRT_LINKED
+    ~TensorRTEngineImpl() {
+        release_buffers(buffers);
+    }
+
     TensorRTLogger logger;
     RuntimePtr runtime;
     EnginePtr engine;
+    ContextPtr context;
+    std::vector<TensorRTBuffer> buffers;
 #endif
 };
+
+#ifdef INFEREDGE_TENSORRT_LINKED
+void prepare_buffers(TensorRTEngineImpl& impl) {
+    release_buffers(impl.buffers);
+
+    if (!impl.engine) {
+        throw std::runtime_error("TensorRT engine is not loaded");
+    }
+
+    const auto add_buffer = [&impl](const TensorMetadata& tensor, bool is_input) {
+        TensorRTBuffer buffer;
+        buffer.name = tensor.name;
+        buffer.is_input = is_input;
+        buffer.element_type = tensor.element_type;
+        buffer.shape = tensor.shape;
+        buffer.element_count = tensor_element_count(buffer.shape);
+        buffer.byte_size = tensor_byte_size(tensor, buffer.element_count);
+        buffer.host_float_buffer.assign(buffer.element_count, 0.0F);
+
+        check_cuda(cudaMalloc(&buffer.device_buffer, buffer.byte_size), "Failed to allocate CUDA buffer: " + buffer.name);
+        check_cuda(cudaMemset(buffer.device_buffer, 0, buffer.byte_size), "Failed to initialize CUDA buffer: " + buffer.name);
+
+        impl.buffers.push_back(std::move(buffer));
+    };
+
+    for (const TensorMetadata& tensor : impl.model_metadata.inputs) {
+        add_buffer(tensor, true);
+    }
+    for (const TensorMetadata& tensor : impl.model_metadata.outputs) {
+        add_buffer(tensor, false);
+    }
+
+    if (impl.buffers.empty()) {
+        throw std::runtime_error("TensorRT buffer preparation failed: no tensors");
+    }
+}
+#endif
 
 TensorRTEngine::TensorRTEngine(RuntimeConfig config)
     : impl_(std::make_unique<TensorRTEngineImpl>(std::move(config))) {}
@@ -151,7 +283,7 @@ EngineMetadata TensorRTEngine::metadata() const {
     metadata.device = impl_->config.device;
 #ifdef INFEREDGE_TENSORRT_LINKED
     metadata.available = true;
-    metadata.status_message = "TensorRT backend is linked. Engine metadata loading is available.";
+    metadata.status_message = "TensorRT backend is linked. Engine metadata loading and one-shot inference are available.";
 #else
     metadata.available = false;
     metadata.status_message = "TensorRT backend is not implemented in this build. This stub prepares Jetson integration.";
@@ -181,12 +313,64 @@ void TensorRTEngine::load_model(const std::string& model_path) {
     }
 
     impl_->model_metadata = extract_model_metadata(*impl_->engine);
+
+    impl_->context.reset(impl_->engine->createExecutionContext());
+    if (!impl_->context) {
+        throw std::runtime_error("Failed to create TensorRT execution context");
+    }
+
+    prepare_buffers(*impl_);
 #endif
 }
 
 void TensorRTEngine::run_once() {
 #ifdef INFEREDGE_TENSORRT_LINKED
-    throw std::runtime_error("TensorRT backend is linked, but inference execution is not implemented yet");
+    if (!impl_->context) {
+        throw std::runtime_error("TensorRT model is not loaded");
+    }
+
+    if (impl_->buffers.empty()) {
+        prepare_buffers(*impl_);
+    }
+
+    CudaStreamGuard stream;
+
+    for (TensorRTBuffer& buffer : impl_->buffers) {
+        if (buffer.is_input) {
+            std::fill(buffer.host_float_buffer.begin(), buffer.host_float_buffer.end(), 0.0F);
+            check_cuda(
+                cudaMemcpyAsync(
+                    buffer.device_buffer,
+                    buffer.host_float_buffer.data(),
+                    buffer.byte_size,
+                    cudaMemcpyHostToDevice,
+                    stream.stream),
+                "Failed to copy TensorRT input to device: " + buffer.name);
+        }
+
+        if (!impl_->context->setTensorAddress(buffer.name.c_str(), buffer.device_buffer)) {
+            throw std::runtime_error("Failed to set TensorRT tensor address: " + buffer.name);
+        }
+    }
+
+    if (!impl_->context->enqueueV3(stream.stream)) {
+        throw std::runtime_error("Failed to enqueue TensorRT inference");
+    }
+
+    for (TensorRTBuffer& buffer : impl_->buffers) {
+        if (!buffer.is_input) {
+            check_cuda(
+                cudaMemcpyAsync(
+                    buffer.host_float_buffer.data(),
+                    buffer.device_buffer,
+                    buffer.byte_size,
+                    cudaMemcpyDeviceToHost,
+                    stream.stream),
+                "Failed to copy TensorRT output to host: " + buffer.name);
+        }
+    }
+
+    check_cuda(cudaStreamSynchronize(stream.stream), "Failed to synchronize TensorRT inference stream");
 #else
     throw std::runtime_error("TensorRT backend is not enabled in this build");
 #endif

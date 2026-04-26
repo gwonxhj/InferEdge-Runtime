@@ -17,6 +17,7 @@ struct RuntimeConfig {
     int warmup = 5;
     int runs = 50;
     std::string output_path = "results/runtime_result.json";
+    bool run_once = false;
     bool manifest_applied = false;
     bool model_path_overridden = false;
     bool engine_overridden = false;

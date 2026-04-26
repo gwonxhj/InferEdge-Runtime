@@ -17,8 +17,8 @@ On Mac development environments, InferEdgeRuntime should continue to avoid Tenso
 
 Progress note:
 
-- Jetson linked builds can now load TensorRT engine metadata.
-- Inference execution remains future work.
+- TensorRT linked builds can now deserialize `.engine` files, extract metadata, allocate float32 dummy buffers, and run one-shot inference.
+- Benchmark timing remains future work.
 
 ## Target Runtime Flow
 
@@ -136,7 +136,7 @@ TensorRT implementation errors should be explicit and actionable. Example messag
 
 ## Non-goals
 
-- No TensorRT inference implementation in this metadata-loading step
+- No TensorRT benchmark implementation in this one-shot inference step
 - No OpenCV preprocessing
 - No real image/video pipeline
 - No RKNN/Hailo backend yet
@@ -149,10 +149,10 @@ TensorRT implementation errors should be explicit and actionable. Example messag
 - [x] Add TensorRT pImpl runtime holder
 - [x] Load serialized `.engine` file
 - [x] Deserialize `ICudaEngine`
-- [ ] Create execution context
+- [x] Create execution context
 - [x] Extract binding/tensor metadata
-- [ ] Allocate buffers
-- [ ] Run one-shot inference
+- [x] Allocate buffers
+- [x] Run one-shot inference
 - [ ] Reuse benchmark runner
 - [ ] Export TensorRT benchmark JSON
 - [ ] Validate on Jetson Orin Nano

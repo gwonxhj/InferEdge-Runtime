@@ -114,6 +114,7 @@ void print_help() {
         << "  --width <n>            Dummy input width, n >= 1 (default: 224)\n"
         << "  --warmup <n>           Number of warmup runs, n >= 0 (default: 5)\n"
         << "  --runs <n>             Number of benchmark runs, n >= 1 (default: 50)\n"
+        << "  --run-once             Run one inference without benchmark timing\n"
         << "  --output <path|auto>   Output result path or auto-generated results filename (default: results/runtime_result.json)\n";
 }
 
@@ -157,6 +158,8 @@ RuntimeConfig parse_args(int argc, char** argv) {
             config.warmup = parse_int_with_minimum(require_value(argc, argv, i, option), option, 0);
         } else if (option == "--runs") {
             config.runs = parse_int_with_minimum(require_value(argc, argv, i, option), option, 1);
+        } else if (option == "--run-once") {
+            config.run_once = true;
         } else if (option == "--output") {
             config.output_path = require_value(argc, argv, i, option);
         } else {
@@ -201,6 +204,7 @@ int run_cli(const RuntimeConfig& config) {
         << "  width:  " << config.width << '\n'
         << "  warmup: " << config.warmup << '\n'
         << "  runs:   " << config.runs << '\n'
+        << "  run_once: " << (config.run_once ? "true" : "false") << '\n'
         << "  output: " << config.output_path << '\n'
         << "\n"
         << "Engine metadata\n"
@@ -216,9 +220,42 @@ int run_cli(const RuntimeConfig& config) {
     std::cout << "  outputs:";
     print_tensor_metadata_list(model_metadata.outputs);
 
-    std::cout << "\nBenchmark\n";
     BenchmarkResult result;
-    if (metadata.available) {
+    if (config.run_once) {
+        std::cout << "\nInference\n";
+        if (metadata.available) {
+            try {
+                engine->run_once();
+                result.success = true;
+                result.status = "success";
+                result.message = "one-shot inference completed";
+                result.warmup_runs = 0;
+                result.timed_runs = 1;
+                std::cout
+                    << "  status: " << result.status << '\n'
+                    << "  runs: 1\n";
+            } catch (const std::runtime_error& error) {
+                result.success = false;
+                result.status = "skipped";
+                result.message = error.what();
+                result.warmup_runs = 0;
+                result.timed_runs = 1;
+                std::cout
+                    << "  status: " << result.status << '\n'
+                    << "  reason: " << result.message << '\n';
+            }
+        } else {
+            result.success = false;
+            result.status = "skipped";
+            result.message = "backend is not available in this build";
+            result.warmup_runs = 0;
+            result.timed_runs = 1;
+            std::cout
+                << "  status: " << result.status << '\n'
+                << "  reason: " << result.message << '\n';
+        }
+    } else if (metadata.available) {
+        std::cout << "\nBenchmark\n";
         try {
             result = engine->benchmark(config.warmup, config.runs);
             std::cout
@@ -246,6 +283,7 @@ int run_cli(const RuntimeConfig& config) {
                 << "  reason: " << result.message << '\n';
         }
     } else {
+        std::cout << "\nBenchmark\n";
         result.success = false;
         result.status = "skipped";
         result.message = "backend is not available in this build";
