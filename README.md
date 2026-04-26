@@ -45,6 +45,8 @@ It is the Runtime stage of the InferEdge portfolio pipeline. InferEdgeForge prep
 - GitHub Actions currently runs default smoke test only
 - ORT linked smoke test remains local/manual because it requires external ONNX Runtime and model files
 
+TensorRT backend execution is planned for Jetson-oriented stages. The current Mac/default build keeps TensorRT as a stub and does not link TensorRT or CUDA. See [docs/tensorrt_backend_plan.md](docs/tensorrt_backend_plan.md) for the Jetson Orin Nano implementation plan.
+
 ## Requirements
 
 - CMake 3.16+
@@ -346,6 +348,8 @@ Forge -> Runtime -> Lab flow:
 ├── scripts/
 │   ├── smoke_default.sh
 │   └── smoke_ort.sh
+├── docs/
+│   └── tensorrt_backend_plan.md
 ├── examples/
 │   └── README.md
 └── tests/
@@ -370,6 +374,7 @@ Forge -> Runtime -> Lab flow:
 - [x] Forge manifest parsing and config default apply
 - [ ] Robust manifest parser or external JSON dependency decision
 - [x] TensorRT backend stub
+- [x] TensorRT backend implementation plan
 - [ ] TensorRT engine loading on Jetson
 - [ ] TensorRT benchmark runner on Jetson
 - [ ] InferEdgeLab direct import workflow
