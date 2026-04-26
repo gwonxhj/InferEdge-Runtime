@@ -30,6 +30,7 @@ InferEdgeRuntime v0.1.0 is a validated MVP release.
 - ONNX Runtime external link configuration
 - ONNX model metadata loading
 - float32 dummy input generation
+- optional OpenCV-based real image input preprocessing
 - ONNX Runtime CPU inference benchmark
 - latency mean/min/max/std/p50/p90/p99
 - FPS calculation
@@ -47,11 +48,11 @@ InferEdgeRuntime v0.1.0 is a validated MVP release.
 
 - ONNX Runtime CPU only
 - float32 input only
-- no real image preprocessing yet
+- real image preprocessing requires `INFEREDGE_ENABLE_OPENCV=ON`
 - no TensorRT output post-processing yet
 - float32 TensorRT buffers only at current stage
 - no multi-input advanced dynamic shape support yet
-- OpenCV/CUDA not linked
+- OpenCV and CUDA are not linked in the default build
 - manifest parsing is limited to the sample Forge handoff schema
 - no full general-purpose JSON parser yet
 - no full unit test suite yet (CI smoke test only)
@@ -65,6 +66,7 @@ TensorRT backend execution is implemented for Jetson-oriented linked builds. The
 - CMake 3.16+
 - C++17 compiler
 - Optional: ONNX Runtime C/C++ package
+- Optional: OpenCV for `--input <image_path>` real image preprocessing
 - Apple Silicon users should use the `osx-arm64` ONNX Runtime package
 - Optional for Jetson TensorRT link validation:
   - Jetson Orin Nano
@@ -130,6 +132,13 @@ cmake -S . -B build-ort -DINFEREDGE_ENABLE_ORT=ON -DINFEREDGE_ORT_ROOT=$HOME/onn
 cmake --build build-ort
 ```
 
+Build with ONNX Runtime and OpenCV real image input enabled:
+
+```bash
+cmake -S . -B build-ort-opencv -DINFEREDGE_ENABLE_ORT=ON -DINFEREDGE_ORT_ROOT=$HOME/onnxruntime/onnxruntime-osx-arm64-1.25.0 -DINFEREDGE_ENABLE_OPENCV=ON
+cmake --build build-ort-opencv
+```
+
 Run a benchmark with a local ONNX model:
 
 ```bash
@@ -180,11 +189,31 @@ CLI notes:
 - `--manifest` loads limited defaults from the Forge/build manifest schema.
 - CLI-provided values always take priority over manifest defaults.
 - `--batch`, `--height`, and `--width` resolve dynamic dummy input dimensions.
+- `--input` uses a real image input instead of dummy zeros when OpenCV support is enabled.
 - Static model dimensions take precedence over CLI shape overrides.
 - `--warmup` controls untimed warmup iterations.
 - `--runs` controls timed iterations used for latency and FPS statistics.
 - `--run-once` runs one inference without benchmark timing.
 - `--output` writes the benchmark result JSON and creates missing output directories.
+
+## Real Inference Mode
+
+`--input <image_path>` enables real image input mode. In this mode, Runtime loads the image with OpenCV, converts BGR to RGB, resizes it to the resolved model input size, normalizes values to `0.0..1.0`, and writes a float32 NCHW tensor with shape `[batch, 3, height, width]`.
+
+The default build remains dependency-free. Real image input requires an OpenCV-enabled build:
+
+```bash
+cmake -S . -B build-ort-opencv -DINFEREDGE_ENABLE_ORT=ON -DINFEREDGE_ORT_ROOT=$HOME/onnxruntime/onnxruntime-osx-arm64-1.25.0 -DINFEREDGE_ENABLE_OPENCV=ON
+cmake --build build-ort-opencv
+```
+
+ONNX Runtime example:
+
+```bash
+./build-ort-opencv/inferedge-runtime --model yolov8n.onnx --input test.jpg --engine onnxruntime --device cpu --batch 1 --height 640 --width 640 --run-once --output results/real_input_onnx.json
+```
+
+TensorRT linked builds use the same `--input` path to fill TensorRT input buffers when OpenCV support is enabled. If `--input` is provided without OpenCV support, Runtime fails with a clear configuration error instead of silently falling back to dummy input.
 
 TensorRT stub example:
 
@@ -460,6 +489,7 @@ Forge -> Runtime -> Lab flow:
 - [x] TensorRT metadata extraction
 - [x] TensorRT one-shot inference
 - [x] TensorRT benchmark runner on Jetson
+- [x] Optional real image input inference mode
 - [ ] TensorRT output post-processing
 - [ ] TensorRT/ONNX Runtime comparison through InferEdgeLab
 - [ ] InferEdgeLab direct import workflow

@@ -107,6 +107,7 @@ void print_help() {
         << "  --version              Show version information\n"
         << "  --manifest <path>      Optional Forge/build manifest path used for default runtime config\n"
         << "  --model <path>         Path to an input model file\n"
+        << "  --input <image_path>   Optional real image input path (requires OpenCV-enabled build)\n"
         << "  --engine <name>        Runtime engine name (supported: onnxruntime, ort, tensorrt, trt; default: onnxruntime)\n"
         << "  --device <name>        Target device name (supported: cpu, jetson, cuda; default: cpu)\n"
         << "  --batch <n>            Dummy input batch size, n >= 1 (default: 1)\n"
@@ -137,6 +138,8 @@ RuntimeConfig parse_args(int argc, char** argv) {
         } else if (option == "--model") {
             config.model_path = require_value(argc, argv, i, option);
             config.model_path_overridden = true;
+        } else if (option == "--input") {
+            config.input_path = require_value(argc, argv, i, option);
         } else if (option == "--engine") {
             config.engine = require_value(argc, argv, i, option);
             config.engine_overridden = true;
@@ -197,6 +200,7 @@ int run_cli(const RuntimeConfig& config) {
         << "  manifest: " << (config.manifest_path.empty() ? "none" : config.manifest_path) << '\n'
         << "  manifest_applied: " << (config.manifest_applied ? "true" : "false") << '\n'
         << "  model:  " << config.model_path << '\n'
+        << "  input:  " << (config.input_path.empty() ? "dummy" : config.input_path) << '\n'
         << "  engine: " << config.engine << '\n'
         << "  device: " << config.device << '\n'
         << "  batch:  " << config.batch << '\n'

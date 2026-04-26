@@ -4,6 +4,12 @@
 #include <onnxruntime_cxx_api.h>
 #endif
 
+#ifdef INFEREDGE_OPENCV_LINKED
+#include <opencv2/core.hpp>
+#include <opencv2/imgcodecs.hpp>
+#include <opencv2/imgproc.hpp>
+#endif
+
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
@@ -101,6 +107,69 @@ std::size_t tensor_element_count(const std::vector<int64_t>& shape) {
     }
     return count;
 }
+
+std::vector<float> load_image_tensor_nchw(
+    const RuntimeConfig& config,
+    const std::vector<int64_t>& shape,
+    const std::string& tensor_name) {
+    if (shape.size() != 4) {
+        throw std::runtime_error("real image input currently requires NCHW 4D input tensor: " + tensor_name);
+    }
+
+    const int64_t batch = shape[0];
+    const int64_t channels = shape[1];
+    const int64_t height = shape[2];
+    const int64_t width = shape[3];
+    if (batch <= 0 || channels <= 0 || height <= 0 || width <= 0) {
+        throw std::runtime_error("real image input requires positive resolved tensor dimensions: " + tensor_name);
+    }
+    if (channels != 3) {
+        throw std::runtime_error("real image input currently supports 3-channel NCHW tensors only: " + tensor_name);
+    }
+
+    const std::size_t element_count = tensor_element_count(shape);
+
+#ifndef INFEREDGE_OPENCV_LINKED
+    (void)config;
+    throw std::runtime_error("real image input requires OpenCV-enabled build: reconfigure with -DINFEREDGE_ENABLE_OPENCV=ON");
+#else
+    if (!std::filesystem::exists(config.input_path)) {
+        throw std::runtime_error("input image file not found: " + config.input_path);
+    }
+
+    cv::Mat image = cv::imread(config.input_path, cv::IMREAD_COLOR);
+    if (image.empty()) {
+        throw std::runtime_error("failed to read input image: " + config.input_path);
+    }
+
+    cv::Mat rgb;
+    cv::cvtColor(image, rgb, cv::COLOR_BGR2RGB);
+
+    cv::Mat resized;
+    cv::resize(rgb, resized, cv::Size(static_cast<int>(width), static_cast<int>(height)));
+
+    cv::Mat float_image;
+    resized.convertTo(float_image, CV_32FC3, 1.0 / 255.0);
+
+    std::vector<float> buffer(element_count, 0.0F);
+    const std::size_t image_stride = static_cast<std::size_t>(channels * height * width);
+    for (int64_t b = 0; b < batch; ++b) {
+        const std::size_t batch_offset = static_cast<std::size_t>(b) * image_stride;
+        for (int64_t y = 0; y < height; ++y) {
+            for (int64_t x = 0; x < width; ++x) {
+                const cv::Vec3f pixel = float_image.at<cv::Vec3f>(static_cast<int>(y), static_cast<int>(x));
+                for (int64_t c = 0; c < channels; ++c) {
+                    const std::size_t offset =
+                        batch_offset +
+                        static_cast<std::size_t>(c * height * width + y * width + x);
+                    buffer[offset] = pixel[static_cast<int>(c)];
+                }
+            }
+        }
+    }
+    return buffer;
+#endif
+}
 #endif
 
 }  // namespace
@@ -120,6 +189,7 @@ struct OnnxRuntimeEngineImpl {
     std::vector<const char*> output_name_ptrs;
     std::vector<std::vector<int64_t>> resolved_input_shapes;
     std::vector<std::vector<float>> input_buffers;
+    std::vector<std::vector<float>> prepared_input_buffers;
 #endif
 };
 
@@ -160,6 +230,7 @@ void OnnxRuntimeEngine::load_model(const std::string& model_path) {
     impl_->output_name_ptrs.clear();
     impl_->resolved_input_shapes.clear();
     impl_->input_buffers.clear();
+    impl_->prepared_input_buffers.clear();
 
     if (!std::filesystem::exists(model_path)) {
         throw std::runtime_error("model file not found: " + model_path);
@@ -224,6 +295,16 @@ void OnnxRuntimeEngine::load_model(const std::string& model_path) {
     for (const std::string& name : impl_->output_names) {
         impl_->output_name_ptrs.push_back(name.c_str());
     }
+
+    if (!impl_->config.input_path.empty()) {
+        impl_->prepared_input_buffers.reserve(impl_->model_metadata.inputs.size());
+        for (std::size_t i = 0; i < impl_->model_metadata.inputs.size(); ++i) {
+            impl_->prepared_input_buffers.push_back(load_image_tensor_nchw(
+                impl_->config,
+                impl_->resolved_input_shapes[i],
+                impl_->model_metadata.inputs[i].name));
+        }
+    }
 #endif
 }
 
@@ -252,7 +333,14 @@ void OnnxRuntimeEngine::run_once() {
 
         const std::vector<int64_t>& shape = impl_->resolved_input_shapes[i];
         const std::size_t element_count = tensor_element_count(shape);
-        impl_->input_buffers.emplace_back(element_count, 0.0F);
+        if (!impl_->config.input_path.empty()) {
+            if (impl_->prepared_input_buffers.size() != impl_->model_metadata.inputs.size()) {
+                throw std::runtime_error("real image input buffer is not prepared");
+            }
+            impl_->input_buffers.push_back(impl_->prepared_input_buffers[i]);
+        } else {
+            impl_->input_buffers.emplace_back(element_count, 0.0F);
+        }
         std::vector<float>& buffer = impl_->input_buffers.back();
 
         input_tensors.push_back(Ort::Value::CreateTensor<float>(

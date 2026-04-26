@@ -10,6 +10,7 @@ struct RuntimeConfig {
     std::string manifest_precision;
     std::string manifest_format;
     std::string model_path;
+    std::string input_path;
     std::string engine = "onnxruntime";
     std::string device = "cpu";
     int batch = 1;
