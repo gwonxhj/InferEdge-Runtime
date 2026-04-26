@@ -60,6 +60,64 @@ Expected:
 - benchmark status is `success`
 - latency and FPS are printed
 
+## Input Mode Metadata Test
+
+Dummy input metadata should be present in every result JSON:
+
+```bash
+./build/inferedge-runtime --model models/sample.onnx --engine onnxruntime --device cpu --batch 1 --height 224 --width 224 --warmup 1 --runs 1 --output results/input_dummy_metadata.json
+```
+
+```bash
+python3 - <<'PY'
+import json
+from pathlib import Path
+
+data = json.loads(Path("results/input_dummy_metadata.json").read_text())
+extra = data["extra"]
+assert extra["input_mode"] == "dummy"
+assert extra["input_path"] == ""
+assert extra["input_preprocess"] == "dummy_zero_float32"
+print("dummy input metadata ok")
+PY
+```
+
+`--input` requires an OpenCV-enabled build:
+
+```bash
+./build/inferedge-runtime --model models/sample.onnx --input examples/sample.jpg --engine onnxruntime --device cpu --batch 1 --height 224 --width 224 --warmup 1 --runs 1 --output results/input_without_opencv.json
+```
+
+Expected:
+
+- command exits non-zero
+- stderr mentions `OpenCV-enabled build`
+
+## OpenCV Real Input Smoke Test
+
+Run this only on a machine where OpenCV provides a CMake package. Some macOS environments do not have `OpenCVConfig.cmake`; in that case, treat configure failure as an environment setup issue and run the check on Jetson or another OpenCV-enabled machine.
+
+```bash
+cmake -S . -B build-ort-opencv -DINFEREDGE_ENABLE_ORT=ON -DINFEREDGE_ORT_ROOT=$HOME/onnxruntime/onnxruntime-osx-arm64-1.25.0 -DINFEREDGE_ENABLE_OPENCV=ON
+cmake --build build-ort-opencv
+./build-ort-opencv/inferedge-runtime --model /path/to/model.onnx --input /path/to/sample.jpg --engine onnxruntime --device cpu --batch 1 --height 640 --width 640 --warmup 3 --runs 10 --output results/ort_real_input_metadata.json
+```
+
+```bash
+python3 - <<'PY'
+import json
+from pathlib import Path
+
+data = json.loads(Path("results/ort_real_input_metadata.json").read_text())
+assert data["status"] == "success"
+assert data["success"] is True
+assert data["extra"]["input_mode"] == "image"
+assert data["extra"]["input_path"]
+assert data["extra"]["input_preprocess"] == "opencv_bgr_to_rgb_resize_float32_nchw"
+print("ort real image input smoke ok")
+PY
+```
+
 ## Missing Model Error Test
 
 ```bash

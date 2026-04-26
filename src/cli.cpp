@@ -190,6 +190,13 @@ int run_cli(const RuntimeConfig& config) {
         return 1;
     }
 
+    if (config.has_real_input()) {
+#ifndef INFEREDGE_OPENCV_LINKED
+        throw std::runtime_error(
+            "real image input requires OpenCV-enabled build: reconfigure with -DINFEREDGE_ENABLE_OPENCV=ON");
+#endif
+    }
+
     const std::unique_ptr<IInferenceEngine> engine = create_engine(config);
     engine->load_model(config.model_path);
     const EngineMetadata metadata = engine->metadata();
@@ -200,7 +207,8 @@ int run_cli(const RuntimeConfig& config) {
         << "  manifest: " << (config.manifest_path.empty() ? "none" : config.manifest_path) << '\n'
         << "  manifest_applied: " << (config.manifest_applied ? "true" : "false") << '\n'
         << "  model:  " << config.model_path << '\n'
-        << "  input:  " << (config.input_path.empty() ? "dummy" : config.input_path) << '\n'
+        << "  input:  " << (config.input_path.empty() ? "none" : config.input_path) << '\n'
+        << "  input_mode: " << config.input_mode() << '\n'
         << "  engine: " << config.engine << '\n'
         << "  device: " << config.device << '\n'
         << "  batch:  " << config.batch << '\n'
