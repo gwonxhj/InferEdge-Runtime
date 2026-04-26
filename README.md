@@ -279,6 +279,8 @@ The `extra` object includes:
 - `compare_ready`: currently `true`
 - `compare_key`
 - `backend_key`
+- `compare_model_source`: `manifest_model_name` or `model_path`
+- `compare_model_name`: normalized model component used by `compare_key`
 
 Top-level compatibility fields:
 
@@ -329,6 +331,10 @@ Recorded-only manifest fields:
 
 - `artifact.precision`
 - `artifact.format`
+
+Compare-key manifest fields:
+
+- `artifact.model_name`
 
 Not applied yet:
 
@@ -381,6 +387,8 @@ Runtime does not perform comparison calculations. It only writes compare-ready m
 - `compare_key`: groups results from the same model and input condition, such as `toy224__b1__h224w224__fp32`
 - `backend_key`: identifies the backend/device pair, such as `onnxruntime__cpu` or `tensorrt__jetson`
 - `runtime_role`: fixed to `runtime-result`
+
+The model component of `compare_key` prefers manifest `artifact.model_name` when available, then falls back to the CLI `--model` path stem. This lets TensorRT artifacts with generic filenames such as `model.engine` still produce a model-specific key like `yolov8n__b1__h640w640__fp32` when Forge supplies `artifact.model_name`.
 
 InferEdgeLab can compare results that share the same `compare_key` and use `backend_key` to distinguish backend/device variants.
 

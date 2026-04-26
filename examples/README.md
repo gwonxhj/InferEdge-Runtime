@@ -98,4 +98,6 @@ Compare-ready metadata:
 - `compare_key` groups results from the same model and input condition.
 - `backend_key` identifies the backend/device pair.
 - `runtime_role` is fixed to `runtime-result`.
+- `extra.compare_model_source` shows whether `compare_key` used manifest `artifact.model_name` or the CLI model path.
+- `extra.compare_model_name` records the normalized model stem used inside `compare_key`.
 - Runtime writes these fields for InferEdgeLab but does not perform comparison itself.

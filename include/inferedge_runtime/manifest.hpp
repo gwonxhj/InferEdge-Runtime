@@ -8,6 +8,7 @@ namespace inferedge_runtime {
 
 struct ManifestConfig {
     std::string model_path;
+    std::string model_name;
     std::string engine;
     std::string device;
     int batch = 0;

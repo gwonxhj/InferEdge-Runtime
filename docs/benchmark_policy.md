@@ -40,6 +40,8 @@ When comparing ONNX Runtime and TensorRT results, compare only results with the 
 
 The `compare_key` groups model and input condition, while `backend_key` identifies the backend/device pair. InferEdgeLab should use `compare_key + backend_key` as the basic comparison unit.
 
+For cross-backend comparison, ONNX Runtime and TensorRT results must have the same `compare_key`. If a TensorRT engine file uses a generic filename such as `model.engine`, provide manifest `artifact.model_name` so Runtime can emit the original model name in `compare_key`.
+
 Runtime latency remains backend-specific end-to-end wall-clock latency. TensorRT `trtexec` GPU latency should not be directly compared with Runtime JSON `mean_ms`.
 
 InferEdgeRuntime does not calculate cross-backend comparison results. It only emits compare-ready metadata so InferEdgeLab can own comparison, reporting, and visualization.

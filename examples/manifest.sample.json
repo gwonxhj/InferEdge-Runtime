@@ -2,7 +2,7 @@
   "schema_version": "inferedge-forge-manifest-v1",
   "artifact": {
     "model_path": "/path/to/model.onnx",
-    "model_name": "model.onnx",
+    "model_name": "yolov8n.onnx",
     "format": "onnx",
     "precision": "fp32"
   },
