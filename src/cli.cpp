@@ -4,8 +4,10 @@
 #include "inferedge_runtime/version.hpp"
 
 #include <iostream>
+#include <sstream>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 namespace inferedge_runtime {
 namespace {
@@ -55,6 +57,34 @@ int parse_int_with_minimum(const std::string& value, const std::string& option, 
         throw std::invalid_argument(
             "invalid integer value for option: " + option + " (" + value + ", minimum: " +
             std::to_string(min_value) + ")");
+    }
+}
+
+std::string format_shape(const std::vector<int64_t>& shape) {
+    std::ostringstream stream;
+    stream << '[';
+    for (std::size_t i = 0; i < shape.size(); ++i) {
+        if (i > 0) {
+            stream << ", ";
+        }
+        stream << shape[i];
+    }
+    stream << ']';
+    return stream.str();
+}
+
+void print_tensor_metadata_list(const std::vector<TensorMetadata>& tensors) {
+    if (tensors.empty()) {
+        std::cout << " []\n";
+        return;
+    }
+
+    std::cout << '\n';
+    for (const TensorMetadata& tensor : tensors) {
+        std::cout
+            << "    - name: " << tensor.name << '\n'
+            << "      type: " << tensor.element_type << '\n'
+            << "      shape: " << format_shape(tensor.shape) << '\n';
     }
 }
 
@@ -123,6 +153,11 @@ int run_cli(const RuntimeConfig& config) {
         return 1;
     }
 
+    const std::unique_ptr<IInferenceEngine> engine = create_engine(config);
+    engine->load_model(config.model_path);
+    const EngineMetadata metadata = engine->metadata();
+    const ModelMetadata model_metadata = engine->model_metadata();
+
     std::cout
         << "InferEdgeRuntime benchmark configuration\n"
         << "  model:  " << config.model_path << '\n'
@@ -130,13 +165,7 @@ int run_cli(const RuntimeConfig& config) {
         << "  device: " << config.device << '\n'
         << "  warmup: " << config.warmup << '\n'
         << "  runs:   " << config.runs << '\n'
-        << "  output: " << config.output_path << '\n';
-
-    const std::unique_ptr<IInferenceEngine> engine = create_engine(config);
-    engine->load_model(config.model_path);
-    const EngineMetadata metadata = engine->metadata();
-
-    std::cout
+        << "  output: " << config.output_path << '\n'
         << "\n"
         << "Engine metadata\n"
         << "  name:      " << metadata.name << '\n'
@@ -145,7 +174,14 @@ int run_cli(const RuntimeConfig& config) {
         << "  available: " << (metadata.available ? "true" : "false") << '\n'
         << "  status:    " << metadata.status_message << '\n'
         << "\n"
-        << "Inference execution is not implemented yet. This command currently validates CLI and backend availability only.\n";
+        << "Model metadata\n"
+        << "  inputs:";
+    print_tensor_metadata_list(model_metadata.inputs);
+    std::cout << "  outputs:";
+    print_tensor_metadata_list(model_metadata.outputs);
+    std::cout
+        << "\n"
+        << "Inference execution is not implemented yet. This command currently validates CLI, backend availability, and model metadata loading.\n";
 
     return 0;
 }

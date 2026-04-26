@@ -10,11 +10,11 @@ This repository is part of the InferEdge portfolio pipeline:
 
 ## Current Stage
 
-The current stage is **C++ Runtime CLI Skeleton** with explicit CLI validation policy, a backend interface, an ONNX Runtime stub backend, and ONNX Runtime C++ link preparation.
+The current stage is **ONNX Runtime model metadata loading**.
 
-This version only provides a minimal C++17 and CMake-based command-line interface. It parses runtime options, validates supported engine/device values and numeric ranges, creates a stub inference engine, then prints the selected benchmark configuration and backend metadata.
+This version provides a minimal C++17 and CMake-based command-line interface. It parses runtime options, validates supported engine/device values and numeric ranges, creates an inference engine, then prints the selected benchmark configuration, backend metadata, and model input/output metadata when ONNX Runtime is linked.
 
-Actual inference execution is not implemented yet. TensorRT, OpenCV, CUDA, and other external runtime dependencies are intentionally not linked at this stage.
+Actual inference execution, benchmarking, and JSON export are not implemented yet. TensorRT, OpenCV, CUDA, and other external runtime dependencies are intentionally not linked at this stage.
 
 ## Build
 
@@ -41,7 +41,9 @@ cmake --build build-ort
 
 When `INFEREDGE_ENABLE_ORT=ON`, `INFEREDGE_ORT_ROOT` must point to an external ONNX Runtime C/C++ package root containing `include/onnxruntime_cxx_api.h` and the `lib/onnxruntime` library. The package must not be vendored into this repository.
 
-At the current stage, a linked ONNX Runtime backend only reports backend availability. It does not load a real model, create tensors, inspect input/output metadata, create a session, or run inference yet. The next step will extend this into model loading, session setup, and input/output metadata discovery.
+This project intentionally uses an external dependency path to reflect real-world deployment environments where runtime libraries are managed outside of the application repository.
+
+At the current stage, a linked ONNX Runtime backend creates an `Ort::Env` and `Ort::Session`, loads the supplied ONNX model file, and prints input/output names, element types, and shapes. It does not create dummy tensors, run inference, execute warmup/runs benchmarking, or export JSON yet. The next step will extend this into input allocation and inference execution.
 
 ## Usage
 
@@ -53,14 +55,24 @@ At the current stage, a linked ONNX Runtime backend only reports backend availab
 
 The model path is accepted as a configuration value only. The CLI does not check model file existence and does not run inference yet.
 
+In the default non-ORT build, the CLI does not require the model file to exist and prints empty model metadata with `available: false`.
+
+In an ONNX Runtime linked build, the model file must exist. Missing files fail with an error such as:
+
+```text
+error: model file not found: models/missing.onnx
+```
+
 The CLI prints backend metadata for the selected engine. The ONNX Runtime backend reports `available: false` in the default build and can report `available: true` only when an external ONNX Runtime C++ package is explicitly linked. In both cases, inference execution is still disabled.
 
 ## Roadmap
 
 1. CLI skeleton
 2. Backend interface and ONNX Runtime stub backend
-3. ONNX Runtime C++ backend
-4. Benchmark runner
-5. JSON result export
-6. TensorRT backend on Jetson
-7. Forge/Lab integration
+3. ONNX Runtime C++ link configuration
+4. ONNX Runtime model metadata loading
+5. ONNX Runtime input allocation and inference execution
+6. Benchmark runner
+7. JSON result export
+8. TensorRT backend on Jetson
+9. Forge/Lab integration
