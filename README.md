@@ -1,5 +1,7 @@
 # InferEdge-Runtime
 
+![CI](https://github.com/gwonxhj/InferEdge-Runtime/actions/workflows/ci.yml/badge.svg)
+
 ## Project Overview
 
 InferEdgeRuntime is a C++ Edge AI runtime for on-device inference and benchmarking.
@@ -45,6 +47,8 @@ It is the Runtime stage of the InferEdge portfolio pipeline. InferEdgeForge prep
 ## Smoke Test Scripts
 
 Use the smoke scripts before opening a PR or after changing runtime behavior.
+
+CI runs the default smoke test on every push to `main` and every pull request. The workflow validates build success, CLI execution, and JSON export without external ONNX Runtime dependencies.
 
 Default smoke test:
 
