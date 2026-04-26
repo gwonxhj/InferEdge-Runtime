@@ -292,6 +292,7 @@ std::filesystem::path write_result_json(
     output
         << "{\n"
         << "  \"schema_version\": \"inferedge-runtime-result-v1\",\n"
+        << "  \"manifest_path\": " << json_string(config.manifest_path) << ",\n"
         << "  \"model_name\": " << json_string(model_name) << ",\n"
         << "  \"model_path\": " << json_string(config.model_path) << ",\n"
         << "  \"engine_name\": " << json_string(engine_metadata.name) << ",\n"
@@ -326,7 +327,8 @@ std::filesystem::path write_result_json(
         << "    \"height\": " << config.height << ",\n"
         << "    \"width\": " << config.width << ",\n"
         << "    \"warmup\": " << config.warmup << ",\n"
-        << "    \"runs\": " << config.runs << "\n"
+        << "    \"runs\": " << config.runs << ",\n"
+        << "    \"manifest_path\": " << json_string(config.manifest_path) << "\n"
         << "  },\n"
         << "  \"latency_ms\": {\n"
         << "    \"mean\": " << benchmark_result.mean_ms << ",\n"
@@ -366,7 +368,8 @@ std::filesystem::path write_result_json(
         << "    \"runtime\": \"inferedge-runtime\",\n"
         << "    \"json_export\": \"enabled\",\n"
         << "    \"output_mode\": " << json_string(output_mode) << ",\n"
-        << "    \"latest_path\": \"results/latest.json\"\n"
+        << "    \"latest_path\": \"results/latest.json\",\n"
+        << "    \"manifest_recorded\": " << (config.manifest_path.empty() ? "false" : "true") << "\n"
         << "  }\n"
         << "}\n";
 
@@ -391,6 +394,7 @@ void print_help() {
         << "Options:\n"
         << "  -h, --help             Show this help message\n"
         << "  --version              Show version information\n"
+        << "  --manifest <path>      Optional Forge/build manifest path recorded in result JSON\n"
         << "  --model <path>         Path to an input model file\n"
         << "  --engine <name>        Runtime engine name (supported: onnxruntime, ort; default: onnxruntime)\n"
         << "  --device <name>        Target device name (supported: cpu; default: cpu)\n"
@@ -416,6 +420,8 @@ RuntimeConfig parse_args(int argc, char** argv) {
             config.show_help = true;
         } else if (option == "--version") {
             config.show_version = true;
+        } else if (option == "--manifest") {
+            config.manifest_path = require_value(argc, argv, i, option);
         } else if (option == "--model") {
             config.model_path = require_value(argc, argv, i, option);
         } else if (option == "--engine") {
@@ -460,6 +466,7 @@ int run_cli(const RuntimeConfig& config) {
 
     std::cout
         << "InferEdgeRuntime benchmark configuration\n"
+        << "  manifest: " << (config.manifest_path.empty() ? "none" : config.manifest_path) << '\n'
         << "  model:  " << config.model_path << '\n'
         << "  engine: " << config.engine << '\n'
         << "  device: " << config.device << '\n'

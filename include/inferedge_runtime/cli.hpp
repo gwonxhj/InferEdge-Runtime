@@ -5,6 +5,7 @@
 namespace inferedge_runtime {
 
 struct RuntimeConfig {
+    std::string manifest_path;
     std::string model_path;
     std::string engine = "onnxruntime";
     std::string device = "cpu";
