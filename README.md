@@ -40,14 +40,16 @@ InferEdgeRuntime v0.1.0 is a validated MVP release.
 - TensorRT backend stub for future Jetson integration
 - TensorRT engine deserialization and metadata extraction on Jetson linked builds
 - TensorRT one-shot dummy inference on Jetson linked builds
+- TensorRT benchmark runner on Jetson linked builds
 
 ## Current Limitations
 
 - ONNX Runtime CPU only
 - float32 input only
-- TensorRT benchmark runner is not implemented yet
 - no real image preprocessing yet
 - no TensorRT output post-processing yet
+- float32 TensorRT buffers only at current stage
+- no multi-input advanced dynamic shape support yet
 - OpenCV/CUDA not linked
 - manifest parsing is limited to the sample Forge handoff schema
 - no full general-purpose JSON parser yet
@@ -201,7 +203,21 @@ cmake --build build-trt
 
 When TensorRT and CUDA headers/libraries are found, the TensorRT backend reports `available=true`, deserializes the `.engine` file, records input/output metadata, allocates float32 dummy host/device buffers, and executes one inference through TensorRT. Expected metadata for the current Forge YOLOv8n TensorRT engine includes input `images` and output `output0`.
 
-TensorRT benchmark timing is still not implemented, so normal benchmark mode remains skipped with a clear not-implemented message. The next Jetson backend stage will connect TensorRT execution to the warmup/runs benchmark runner.
+Jetson TensorRT benchmark:
+
+```bash
+./build-trt/inferedge-runtime --model /home/risenano01/InferEdgeForge/builds/yolov8n__jetson__tensorrt__jetson_fp16/model.engine --engine tensorrt --device jetson --batch 1 --height 640 --width 640 --warmup 10 --runs 50 --output results/tensorrt_benchmark.json
+```
+
+Expected benchmark behavior:
+
+- `engine.available=true`
+- `status=success`
+- `mean_ms > 0`
+- `p99_ms > 0`
+- `fps_value > 0`
+- `model_metadata.inputs` contains `images`
+- `model_metadata.outputs` contains `output0`
 
 Output modes:
 
@@ -411,7 +427,9 @@ Forge -> Runtime -> Lab flow:
 - [x] TensorRT engine deserialization on Jetson
 - [x] TensorRT metadata extraction
 - [x] TensorRT one-shot inference
-- [ ] TensorRT benchmark runner on Jetson
+- [x] TensorRT benchmark runner on Jetson
+- [ ] TensorRT output post-processing
+- [ ] TensorRT/ONNX Runtime comparison through InferEdgeLab
 - [ ] InferEdgeLab direct import workflow
 
 ## Version

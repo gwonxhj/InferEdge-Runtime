@@ -151,7 +151,7 @@ PY
 
 ## TensorRT Metadata Extraction Smoke Test
 
-Run this on Jetson after TensorRT and CUDA are installed. This validates TensorRT link configuration, `.engine` deserialization, and input/output metadata extraction. TensorRT benchmark execution is still intentionally not implemented.
+Run this on Jetson after TensorRT and CUDA are installed. This validates TensorRT link configuration, `.engine` deserialization, and input/output metadata extraction.
 
 ```bash
 cmake -S . -B build-trt -DINFEREDGE_ENABLE_TENSORRT=ON
@@ -170,8 +170,8 @@ assert data["engine_name"] == "tensorrt"
 assert data["engine_backend"] == "tensorrt"
 assert data["device_name"] == "jetson"
 assert data["engine"]["available"] is True
-assert data["status"] == "skipped"
-assert "not implemented" in data["benchmark"]["message"]
+assert data["status"] == "success"
+assert data["success"] is True
 inputs = data["model_metadata"]["inputs"]
 outputs = data["model_metadata"]["outputs"]
 assert inputs, inputs
@@ -211,6 +211,42 @@ outputs = data["model_metadata"]["outputs"]
 assert any(t["name"] == "images" for t in inputs)
 assert any(t["name"] == "output0" for t in outputs)
 print("jetson tensorrt run_once ok")
+PY
+```
+
+## TensorRT Benchmark Smoke Test
+
+Run this on Jetson after TensorRT and CUDA are installed. This validates warmup/timed inference execution and TensorRT benchmark JSON export.
+
+```bash
+cmake -S . -B build-trt -DINFEREDGE_ENABLE_TENSORRT=ON
+cmake --build build-trt
+./build-trt/inferedge-runtime --model /home/risenano01/InferEdgeForge/builds/yolov8n__jetson__tensorrt__jetson_fp16/model.engine --engine tensorrt --device jetson --batch 1 --height 640 --width 640 --warmup 10 --runs 50 --output results/tensorrt_benchmark.json
+python3 -m json.tool results/tensorrt_benchmark.json > /tmp/tensorrt_benchmark_pretty.json
+```
+
+```bash
+python3 - <<'PY'
+import json
+from pathlib import Path
+
+data = json.loads(Path("results/tensorrt_benchmark.json").read_text())
+assert data["engine_name"] == "tensorrt"
+assert data["engine_backend"] == "tensorrt"
+assert data["device_name"] == "jetson"
+assert data["engine"]["available"] is True
+assert data["success"] is True
+assert data["status"] == "success"
+assert data["mean_ms"] > 0
+assert data["p99_ms"] > 0
+assert data["fps_value"] > 0
+assert data["latency_ms"]["samples"]
+assert len(data["latency_ms"]["samples"]) == 50
+inputs = data["model_metadata"]["inputs"]
+outputs = data["model_metadata"]["outputs"]
+assert any(t["name"] == "images" for t in inputs)
+assert any(t["name"] == "output0" for t in outputs)
+print("jetson tensorrt benchmark ok")
 PY
 ```
 
