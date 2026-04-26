@@ -10,11 +10,11 @@ This repository is part of the InferEdge portfolio pipeline:
 
 ## Current Stage
 
-The current stage is **ONNX Runtime model metadata loading**.
+The current stage is **ONNX Runtime dummy inference execution**.
 
-This version provides a minimal C++17 and CMake-based command-line interface. It parses runtime options, validates supported engine/device values and numeric ranges, creates an inference engine, then prints the selected benchmark configuration, backend metadata, and model input/output metadata when ONNX Runtime is linked.
+This version provides a minimal C++17 and CMake-based command-line interface. It parses runtime options, validates supported engine/device values and numeric ranges, creates an inference engine, prints backend and model metadata, and runs one ONNX Runtime inference with generated float32 dummy inputs when ONNX Runtime is linked.
 
-Actual inference execution, benchmarking, and JSON export are not implemented yet. TensorRT, OpenCV, CUDA, and other external runtime dependencies are intentionally not linked at this stage.
+Benchmark loops, latency statistics, FPS calculation, and JSON export are not implemented yet. TensorRT, OpenCV, CUDA, and other external runtime dependencies are intentionally not linked at this stage.
 
 ## Build
 
@@ -43,19 +43,19 @@ When `INFEREDGE_ENABLE_ORT=ON`, `INFEREDGE_ORT_ROOT` must point to an external O
 
 This project intentionally uses an external dependency path to reflect real-world deployment environments where runtime libraries are managed outside of the application repository.
 
-At the current stage, a linked ONNX Runtime backend creates an `Ort::Env` and `Ort::Session`, loads the supplied ONNX model file, and prints input/output names, element types, and shapes. It does not create dummy tensors, run inference, execute warmup/runs benchmarking, or export JSON yet. The next step will extend this into input allocation and inference execution.
+At the current stage, a linked ONNX Runtime backend creates an `Ort::Env` and persistent `Ort::Session`, loads the supplied ONNX model file, prints input/output names, element types, and shapes, creates float32 dummy input tensors, and runs inference once. It does not execute warmup/runs benchmark loops, calculate latency statistics or FPS, or export JSON yet.
 
 ## Usage
 
 ```bash
 ./build/inferedge-runtime --help
 ./build/inferedge-runtime --version
-./build/inferedge-runtime --model models/sample.onnx --engine onnxruntime --device cpu --warmup 5 --runs 50 --output results/sample.json
+./build/inferedge-runtime --model models/sample.onnx --engine onnxruntime --device cpu --batch 1 --height 224 --width 224 --warmup 5 --runs 50 --output results/sample.json
 ```
 
-The model path is accepted as a configuration value only. The CLI does not check model file existence and does not run inference yet.
+The `--batch`, `--height`, and `--width` options are used to resolve dynamic dummy input dimensions. Dynamic or zero dimensions are resolved as batch for dimension 0, `3` for dimension 1, height for dimension 2, width for dimension 3, and `1` for later dimensions. Static model dimensions take precedence over CLI overrides.
 
-In the default non-ORT build, the CLI does not require the model file to exist and prints empty model metadata with `available: false`.
+In the default non-ORT build, the CLI does not require the model file to exist, prints empty model metadata with `available: false`, and skips inference.
 
 In an ONNX Runtime linked build, the model file must exist. Missing files fail with an error such as:
 
@@ -63,7 +63,7 @@ In an ONNX Runtime linked build, the model file must exist. Missing files fail w
 error: model file not found: models/missing.onnx
 ```
 
-The CLI prints backend metadata for the selected engine. The ONNX Runtime backend reports `available: false` in the default build and can report `available: true` only when an external ONNX Runtime C++ package is explicitly linked. In both cases, inference execution is still disabled.
+The ONNX Runtime linked dummy execution currently supports float32 inputs only. Models with non-float32 inputs fail before inference with a clear error.
 
 ## Roadmap
 
@@ -71,8 +71,9 @@ The CLI prints backend metadata for the selected engine. The ONNX Runtime backen
 2. Backend interface and ONNX Runtime stub backend
 3. ONNX Runtime C++ link configuration
 4. ONNX Runtime model metadata loading
-5. ONNX Runtime input allocation and inference execution
+5. ONNX Runtime dummy input allocation and one-shot inference execution
 6. Benchmark runner
-7. JSON result export
-8. TensorRT backend on Jetson
-9. Forge/Lab integration
+7. Latency statistics and FPS calculation
+8. JSON result export
+9. TensorRT backend on Jetson
+10. Forge/Lab integration
