@@ -3,6 +3,7 @@
 #include "inferedge_runtime/engine.hpp"
 #include "inferedge_runtime/version.hpp"
 
+#include <cctype>
 #include <chrono>
 #include <ctime>
 #include <filesystem>
@@ -139,6 +140,50 @@ std::string current_utc_timestamp() {
     return stream.str();
 }
 
+std::string timestamp_for_filename(const std::string& timestamp) {
+    std::string value;
+    value.reserve(timestamp.size());
+    for (const char ch : timestamp) {
+        if (ch != '-' && ch != ':') {
+            value.push_back(ch);
+        }
+    }
+    return value;
+}
+
+std::string sanitize_filename_component(const std::string& value) {
+    std::string sanitized;
+    sanitized.reserve(value.size());
+    for (const unsigned char ch : value) {
+        if (std::isalnum(ch) || ch == '-' || ch == '_' || ch == '.') {
+            sanitized.push_back(static_cast<char>(ch));
+        } else {
+            sanitized.push_back('_');
+        }
+    }
+    return sanitized.empty() ? "unknown" : sanitized;
+}
+
+std::filesystem::path resolve_output_path(
+    const RuntimeConfig& config,
+    const EngineMetadata& engine_metadata,
+    const std::string& timestamp) {
+    if (config.output_path != "auto") {
+        return std::filesystem::path(config.output_path);
+    }
+
+    const std::string model_stem = sanitize_filename_component(
+        std::filesystem::path(config.model_path).stem().string());
+    const std::string engine_name = sanitize_filename_component(engine_metadata.name);
+    const std::string device_name = sanitize_filename_component(engine_metadata.device);
+    const std::string filename =
+        model_stem + "__" + engine_name + "__" + device_name + "__fp32__b" +
+        std::to_string(config.batch) + "__h" + std::to_string(config.height) + "w" +
+        std::to_string(config.width) + "__" + timestamp_for_filename(timestamp) + ".json";
+
+    return std::filesystem::path("results") / filename;
+}
+
 std::string system_os_name() {
 #if defined(__APPLE__)
     return "macOS";
@@ -217,22 +262,31 @@ void write_tensor_metadata_json(std::ostream& output, const std::vector<TensorMe
     output << "]";
 }
 
-void write_result_json(
-    const RuntimeConfig& config,
-    const EngineMetadata& engine_metadata,
-    const ModelMetadata& model_metadata,
-    const BenchmarkResult& benchmark_result) {
-    const std::filesystem::path output_path(config.output_path);
-    const std::filesystem::path parent_path = output_path.parent_path();
+void write_text_file(const std::filesystem::path& path, const std::string& content) {
+    const std::filesystem::path parent_path = path.parent_path();
     if (!parent_path.empty()) {
         std::filesystem::create_directories(parent_path);
     }
 
-    std::ofstream output(output_path);
+    std::ofstream output(path);
     if (!output) {
-        throw std::runtime_error("failed to open output JSON file: " + config.output_path);
+        throw std::runtime_error("failed to open output JSON file: " + path.string());
     }
 
+    output << content;
+}
+
+std::filesystem::path write_result_json(
+    const RuntimeConfig& config,
+    const EngineMetadata& engine_metadata,
+    const ModelMetadata& model_metadata,
+    const BenchmarkResult& benchmark_result) {
+    const std::string timestamp = current_utc_timestamp();
+    const std::filesystem::path output_path = resolve_output_path(config, engine_metadata, timestamp);
+    const std::filesystem::path latest_path("results/latest.json");
+    const std::string output_mode = config.output_path == "auto" ? "auto" : "explicit";
+
+    std::ostringstream output;
     output << std::fixed << std::setprecision(6);
     const std::string model_name = std::filesystem::path(config.model_path).filename().string();
     output
@@ -293,7 +347,7 @@ void write_result_json(
         << "    \"status\": " << json_string(benchmark_result.status) << ",\n"
         << "    \"message\": " << json_string(benchmark_result.message) << "\n"
         << "  },\n"
-        << "  \"timestamp\": " << json_string(current_utc_timestamp()) << ",\n"
+        << "  \"timestamp\": " << json_string(timestamp) << ",\n"
         << "  \"system\": {\n"
         << "    \"os\": " << json_string(system_os_name()) << ",\n"
         << "    \"compiler\": " << json_string(compiler_name()) << ",\n"
@@ -310,9 +364,19 @@ void write_result_json(
         << "  },\n"
         << "  \"extra\": {\n"
         << "    \"runtime\": \"inferedge-runtime\",\n"
-        << "    \"json_export\": \"enabled\"\n"
+        << "    \"json_export\": \"enabled\",\n"
+        << "    \"output_mode\": " << json_string(output_mode) << ",\n"
+        << "    \"latest_path\": \"results/latest.json\"\n"
         << "  }\n"
         << "}\n";
+
+    const std::string json = output.str();
+    write_text_file(output_path, json);
+    if (output_path.lexically_normal() != latest_path.lexically_normal()) {
+        write_text_file(latest_path, json);
+    }
+
+    return output_path;
 }
 
 }  // namespace
@@ -335,7 +399,7 @@ void print_help() {
         << "  --width <n>            Dummy input width, n >= 1 (default: 224)\n"
         << "  --warmup <n>           Number of warmup runs, n >= 0 (default: 5)\n"
         << "  --runs <n>             Number of benchmark runs, n >= 1 (default: 50)\n"
-        << "  --output <path>        Output result path (default: results/runtime_result.json)\n";
+        << "  --output <path|auto>   Output result path or auto-generated results filename (default: results/runtime_result.json)\n";
 }
 
 void print_version() {
@@ -448,11 +512,12 @@ int run_cli(const RuntimeConfig& config) {
             << "  reason: " << result.message << '\n';
     }
 
-    write_result_json(config, metadata, model_metadata, result);
+    const std::filesystem::path output_path = write_result_json(config, metadata, model_metadata, result);
 
     std::cout
         << "\nResult JSON\n"
-        << "  path: " << config.output_path << '\n'
+        << "  path: " << output_path.string() << '\n'
+        << "  latest: results/latest.json\n"
         << "  status: written\n";
 
     return 0;
