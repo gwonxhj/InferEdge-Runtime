@@ -1,49 +1,102 @@
 # InferEdge-Runtime
 
-InferEdgeRuntime is a C++ Edge AI runtime project for on-device inference execution and benchmarking.
+## Project Overview
 
-This repository is part of the InferEdge portfolio pipeline:
+InferEdgeRuntime is a C++ Edge AI runtime for on-device inference and benchmarking.
 
-1. InferEdgeForge prepares and exports model artifacts.
-2. InferEdgeRuntime executes models on edge targets and records runtime behavior.
-3. InferEdgeLab analyzes benchmark results, compares backends, and presents portfolio-ready reports.
+It is the Runtime stage of the InferEdge portfolio pipeline. InferEdgeForge prepares model artifacts, InferEdgeRuntime runs and benchmarks those artifacts on target devices, and InferEdgeLab analyzes the exported result JSON files.
 
-## Current Stage
+## InferEdge Pipeline Position
 
-The current stage is **ONNX Runtime benchmark runner with JSON export**.
+1. Forge: Build / Convert / Metadata
+2. Runtime: Run / Benchmark / Export Result
+3. Lab: Analyze / Compare / Report
 
-This version provides a minimal C++17 and CMake-based command-line interface. It parses runtime options, validates supported engine/device values and numeric ranges, creates an inference engine, prints backend and model metadata, runs warmup iterations followed by timed ONNX Runtime inference runs when ONNX Runtime is linked, and writes a structured JSON result file to `--output`.
+## Current Capabilities
 
-The CLI reports latency mean, min, max, population standard deviation, p50, p90, p99, and FPS. TensorRT, OpenCV, CUDA, and other external runtime dependencies are intentionally not linked at this stage.
+- C++17 + CMake build
+- CLI option validation
+- ONNX Runtime external link configuration
+- ONNX model metadata loading
+- float32 dummy input generation
+- ONNX Runtime CPU inference benchmark
+- latency mean/min/max/std/p50/p90/p99
+- FPS calculation
+- JSON result export
+- Lab-compatible top-level fields
 
-## Build
+## Current Limitations
+
+- ONNX Runtime CPU only
+- float32 input only
+- TensorRT not implemented yet
+- OpenCV/CUDA not linked
+- no real image preprocessing yet
+- no model artifact auto-discovery from Forge yet
+- no automated test suite yet
+
+## Requirements
+
+- CMake 3.16+
+- C++17 compiler
+- Optional: ONNX Runtime C/C++ package
+- Apple Silicon users should use the `osx-arm64` ONNX Runtime package
+
+## Quickstart: Default Build
+
+The default build does not require ONNX Runtime. It still writes a JSON result, but the benchmark is marked as skipped.
 
 ```bash
 cmake -S . -B build
 cmake --build build
+./build/inferedge-runtime --model models/sample.onnx --engine onnxruntime --device cpu --batch 1 --height 224 --width 224 --warmup 1 --runs 1 --output results/default_skipped.json
 ```
 
-## ONNX Runtime C++ Backend Link Preparation
+Expected behavior:
 
-The default build does not require ONNX Runtime:
+- build succeeds without external runtime dependencies
+- backend availability is `false`
+- benchmark status is `skipped`
+- `results/default_skipped.json` is created
+
+## Quickstart: ONNX Runtime Linked Build On Apple Silicon
+
+Keep the ONNX Runtime package outside this repository. Do not vendor ONNX Runtime headers, libraries, or model files into this repo.
+
+Example package location:
 
 ```bash
-cmake -S . -B build
-cmake --build build
+~/onnxruntime/onnxruntime-osx-arm64-1.25.0
 ```
 
-To validate the ONNX Runtime C++ link path, download the platform-specific ONNX Runtime package from GitHub Releases and keep it outside this repository. Apple Silicon Macs such as M1, M2, and M3 should use the `osx-arm64` package.
+Build with ONNX Runtime enabled:
 
 ```bash
-cmake -S . -B build-ort -DINFEREDGE_ENABLE_ORT=ON -DINFEREDGE_ORT_ROOT=/path/to/onnxruntime-osx-arm64
+cmake -S . -B build-ort -DINFEREDGE_ENABLE_ORT=ON -DINFEREDGE_ORT_ROOT=$HOME/onnxruntime/onnxruntime-osx-arm64-1.25.0
 cmake --build build-ort
 ```
 
-When `INFEREDGE_ENABLE_ORT=ON`, `INFEREDGE_ORT_ROOT` must point to an external ONNX Runtime C/C++ package root containing `include/onnxruntime_cxx_api.h` and the `lib/onnxruntime` library. The package must not be vendored into this repository.
+Run a benchmark with a local ONNX model:
 
-This project intentionally uses an external dependency path to reflect real-world deployment environments where runtime libraries are managed outside of the application repository.
+```bash
+./build-ort/inferedge-runtime --model /path/to/model.onnx --engine onnxruntime --device cpu --batch 1 --height 224 --width 224 --warmup 3 --runs 10 --output results/ort_cpu.json
+```
 
-At the current stage, a linked ONNX Runtime backend creates an `Ort::Env` and persistent `Ort::Session`, loads the supplied ONNX model file, prints input/output names, element types, and shapes, creates float32 dummy input tensors, executes warmup runs, measures timed inference latency, and exports a JSON result for InferEdgeLab analysis.
+Expected behavior:
+
+- backend availability is `true`
+- model input/output metadata is printed
+- warmup iterations run before timed runs
+- latency and FPS are printed
+- `results/ort_cpu.json` is created
+
+## macOS Quarantine Note
+
+Downloaded ONNX Runtime `.dylib` files can be blocked by macOS quarantine policy. If the linked binary fails to load the ONNX Runtime library, remove the quarantine attribute from the external ONNX Runtime package:
+
+```bash
+xattr -dr com.apple.quarantine ~/onnxruntime/onnxruntime-osx-arm64-1.25.0
+```
 
 ## Usage
 
@@ -53,13 +106,35 @@ At the current stage, a linked ONNX Runtime backend creates an `Ort::Env` and pe
 ./build/inferedge-runtime --model models/sample.onnx --engine onnxruntime --device cpu --batch 1 --height 224 --width 224 --warmup 5 --runs 50 --output results/sample.json
 ```
 
-The `--batch`, `--height`, and `--width` options are used to resolve dynamic dummy input dimensions. Dynamic or zero dimensions are resolved as batch for dimension 0, `3` for dimension 1, height for dimension 2, width for dimension 3, and `1` for later dimensions. Static model dimensions take precedence over CLI overrides.
+CLI notes:
 
-The `--warmup` option controls untimed warmup iterations. The `--runs` option controls timed inference iterations used to calculate latency and FPS statistics.
+- `--batch`, `--height`, and `--width` resolve dynamic dummy input dimensions.
+- Static model dimensions take precedence over CLI shape overrides.
+- `--warmup` controls untimed warmup iterations.
+- `--runs` controls timed iterations used for latency and FPS statistics.
+- `--output` writes the benchmark result JSON and creates missing output directories.
 
-The `--output` option writes a JSON result file. Missing output directories are created automatically. The JSON schema is designed as the handoff format for InferEdgeLab and includes:
+## JSON Result Schema
+
+Runtime JSON results include nested structured fields for detailed reporting and top-level compatibility fields for quick comparison.
+
+Main nested fields:
 
 - `schema_version`
+- `model`
+- `engine`
+- `device`
+- `run_config`
+- `latency_ms`
+- `fps`
+- `benchmark`
+- `timestamp`
+- `system`
+- `model_metadata`
+- `extra`
+
+Top-level compatibility fields:
+
 - `model_name`
 - `model_path`
 - `engine_name`
@@ -73,50 +148,56 @@ The `--output` option writes a JSON result file. Missing output directories are 
 - `fps_value`
 - `success`
 - `status`
-- `model`
-- `engine`
-- `device`
-- `run_config`
-- `latency_ms`
-- `fps`
-- `benchmark`
-- `timestamp`
-- `system`
-- `model_metadata`
-- `extra`
+
+See [examples/README.md](examples/README.md) for command examples and compact JSON field notes.
 
 ## InferEdgeLab Compatibility
 
 Runtime JSON results include both nested structured fields and top-level compatibility fields.
 
-The nested fields are intended for detailed reporting and future schema expansion. The top-level compatibility fields are intended for quick comparison in InferEdgeLab and EdgeBench-style loaders without requiring deep nested parsing.
+The nested fields are intended for detailed reports and future schema expansion. The top-level compatibility fields are intended for quick comparison in InferEdgeLab and EdgeBench-style loaders without deep nested parsing.
 
-Key compatibility fields include `model_name`, `model_path`, `engine_name`, `engine_backend`, `device_name`, `batch`, `height`, `width`, `mean_ms`, `p99_ms`, `fps_value`, `success`, and `status`.
+Forge -> Runtime -> Lab flow:
 
-The intended portfolio pipeline is:
+1. Forge builds or exports model artifacts.
+2. Runtime runs ONNX Runtime benchmark and writes JSON result.
+3. Lab reads JSON results and compares/report performance.
 
-1. InferEdgeForge builds or exports model artifacts.
-2. InferEdgeRuntime runs ONNX Runtime benchmarks and writes JSON results.
-3. InferEdgeLab reads JSON results and compares or reports performance.
-
-In the default non-ORT build, the CLI does not require the model file to exist, prints empty model metadata with `available: false`, and skips inference.
-
-In an ONNX Runtime linked build, the model file must exist. Missing files fail with an error such as:
+## Repository Layout
 
 ```text
-error: model file not found: models/missing.onnx
+.
+├── CMakeLists.txt
+├── include/
+│   └── inferedge_runtime/
+│       ├── cli.hpp
+│       ├── engine.hpp
+│       ├── version.hpp
+│       └── engines/
+│           └── onnxruntime_engine.hpp
+├── src/
+│   ├── cli.cpp
+│   ├── engine.cpp
+│   ├── main.cpp
+│   └── engines/
+│       └── onnxruntime_engine.cpp
+├── examples/
+│   └── README.md
+└── tests/
+    └── README.md
 ```
-
-The ONNX Runtime linked dummy execution currently supports float32 inputs only. Models with non-float32 inputs fail before inference with a clear error.
 
 ## Roadmap
 
-1. CLI skeleton
-2. Backend interface and ONNX Runtime stub backend
-3. ONNX Runtime C++ link configuration
-4. ONNX Runtime model metadata loading
-5. ONNX Runtime dummy input allocation and one-shot inference execution
-6. Benchmark runner
-7. JSON result export
-8. TensorRT backend on Jetson
-9. Forge/Lab integration
+- [x] CLI skeleton
+- [x] Backend interface and ONNX Runtime stub backend
+- [x] ONNX Runtime C++ link configuration
+- [x] ONNX model metadata loading
+- [x] ONNX Runtime dummy inference
+- [x] Benchmark runner
+- [x] JSON result export
+- [x] Lab-compatible JSON fields
+- [ ] TensorRT backend on Jetson
+- [ ] Forge metadata input integration
+- [ ] InferEdgeLab direct import workflow
+- [ ] Automated smoke tests
