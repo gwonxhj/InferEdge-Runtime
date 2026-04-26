@@ -172,6 +172,7 @@ ManifestConfig load_manifest_config(const std::string& path) {
     const std::string runtime = find_object_section(json, "runtime");
 
     manifest.model_path = extract_json_string_value(artifact, "model_path");
+    manifest.model_name = extract_json_string_value(artifact, "model_name");
     manifest.precision = extract_json_string_value(artifact, "precision");
     manifest.format = extract_json_string_value(artifact, "format");
     manifest.engine = extract_json_string_value(runtime, "engine");
@@ -184,6 +185,8 @@ ManifestConfig load_manifest_config(const std::string& path) {
 }
 
 void apply_manifest_defaults(RuntimeConfig& config, const ManifestConfig& manifest) {
+    config.manifest_model_name = manifest.model_name;
+
     if (!config.model_path_overridden && !manifest.model_path.empty()) {
         config.model_path = manifest.model_path;
     }

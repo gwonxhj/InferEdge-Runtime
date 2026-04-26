@@ -6,6 +6,7 @@ namespace inferedge_runtime {
 
 struct RuntimeConfig {
     std::string manifest_path;
+    std::string manifest_model_name;
     std::string manifest_precision;
     std::string manifest_format;
     std::string model_path;

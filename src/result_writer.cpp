@@ -103,9 +103,24 @@ std::filesystem::path resolve_output_path(
     return std::filesystem::path("results") / filename;
 }
 
+std::string stem_from_path_like_value(const std::string& value) {
+    return std::filesystem::path(value).stem().string();
+}
+
+std::string compare_model_name(const RuntimeConfig& config) {
+    if (!config.manifest_model_name.empty()) {
+        return sanitize_filename_component(stem_from_path_like_value(config.manifest_model_name));
+    }
+
+    return sanitize_filename_component(std::filesystem::path(config.model_path).stem().string());
+}
+
+std::string compare_model_source(const RuntimeConfig& config) {
+    return config.manifest_model_name.empty() ? "model_path" : "manifest_model_name";
+}
+
 std::string make_compare_key(const RuntimeConfig& config) {
-    const std::string model_stem = sanitize_filename_component(
-        std::filesystem::path(config.model_path).stem().string());
+    const std::string model_stem = compare_model_name(config);
     return model_stem + "__b" + std::to_string(config.batch) + "__h" +
            std::to_string(config.height) + "w" + std::to_string(config.width) + "__fp32";
 }
@@ -220,6 +235,8 @@ std::filesystem::path write_result_json(
     const std::string output_mode = config.output_path == "auto" ? "auto" : "explicit";
     const std::string compare_key = make_compare_key(config);
     const std::string backend_key = make_backend_key(engine_metadata, config);
+    const std::string compare_name = compare_model_name(config);
+    const std::string compare_source = compare_model_source(config);
 
     std::ostringstream output;
     output << std::fixed << std::setprecision(6);
@@ -314,7 +331,9 @@ std::filesystem::path write_result_json(
         << "    \"manifest_format\": " << json_string(config.manifest_format) << ",\n"
         << "    \"compare_ready\": true,\n"
         << "    \"compare_key\": " << json_string(compare_key) << ",\n"
-        << "    \"backend_key\": " << json_string(backend_key) << "\n"
+        << "    \"backend_key\": " << json_string(backend_key) << ",\n"
+        << "    \"compare_model_source\": " << json_string(compare_source) << ",\n"
+        << "    \"compare_model_name\": " << json_string(compare_name) << "\n"
         << "  }\n"
         << "}\n";
 

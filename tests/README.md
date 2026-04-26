@@ -103,6 +103,8 @@ assert "backend_key" in data
 assert data["extra"]["compare_ready"] is True
 assert data["extra"]["compare_key"] == data["compare_key"]
 assert data["extra"]["backend_key"] == data["backend_key"]
+assert data["extra"]["compare_model_source"] in {"manifest_model_name", "model_path"}
+assert data["extra"]["compare_model_name"]
 print("manifest sample smoke ok")
 PY
 ```
@@ -120,6 +122,18 @@ Expected:
 - `model_path` is loaded from `artifact.model_path`
 - `engine`, `device`, `batch`, `height`, and `width` are loaded from `runtime`
 - `manifest_applied` is `true`
+
+Manifest-based compare key:
+
+```bash
+./build/inferedge-runtime --manifest examples/manifest.sample.json --model models/model.engine --engine tensorrt --device jetson --batch 1 --height 640 --width 640 --warmup 1 --runs 1 --output results/manifest_compare_key.json
+```
+
+Expected:
+
+- `compare_key` uses `artifact.model_name`, for example `yolov8n__b1__h640w640__fp32`
+- `extra.compare_model_source` is `manifest_model_name`
+- `extra.compare_model_name` is the normalized model stem
 
 CLI override priority:
 
