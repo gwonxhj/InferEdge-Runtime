@@ -1,0 +1,12 @@
+build/
+cmake-build-*/
+.DS_Store
+*.o
+*.a
+*.so
+*.dylib
+*.exe
+results/
+models/
+.vscode/
+.idea/
