@@ -126,6 +126,27 @@ Expected:
 - CLI `--model` wins over `artifact.model_path`
 - CLI `--batch`, `--height`, and `--width` win over manifest values
 
+## TensorRT Stub Smoke Test
+
+```bash
+./build/inferedge-runtime --model models/sample.engine --engine tensorrt --device cpu --batch 1 --height 224 --width 224 --warmup 1 --runs 1 --output results/tensorrt_stub_smoke.json
+python3 -m json.tool results/tensorrt_stub_smoke.json > /tmp/tensorrt_stub_smoke_pretty.json
+```
+
+```bash
+python3 - <<'PY'
+import json
+from pathlib import Path
+
+data = json.loads(Path("results/tensorrt_stub_smoke.json").read_text())
+assert data["engine_name"] == "tensorrt"
+assert data["engine_backend"] == "tensorrt"
+assert data["status"] == "skipped"
+assert data["success"] is False
+print("tensorrt stub smoke ok")
+PY
+```
+
 ## JSON Validity Test
 
 ```bash

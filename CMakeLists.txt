@@ -28,6 +28,7 @@ add_executable(inferedge-runtime
     src/manifest.cpp
     src/result_writer.cpp
     src/engines/onnxruntime_engine.cpp
+    src/engines/tensorrt_engine.cpp
 )
 
 target_include_directories(inferedge-runtime
