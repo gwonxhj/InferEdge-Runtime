@@ -228,6 +228,28 @@ See [examples/README.md](examples/README.md) for command examples and compact JS
 
 Runtime can now record a manifest path produced by Forge or another build stage. This step does not parse or apply manifest values yet. The next integration step will let Runtime read a manifest and receive model path, engine/backend, precision, input shape, and artifact metadata from Forge.
 
+Sample manifest:
+
+- `examples/manifest.sample.json`
+
+Current behavior:
+
+- Runtime records the `--manifest` path in the result JSON.
+- Runtime does not read `model_path`, `engine`, `batch`, `height`, or `width` from the manifest yet.
+- Manifest parsing and RuntimeConfig auto-apply are planned for the next step.
+
+Default build example:
+
+```bash
+./build/inferedge-runtime --manifest examples/manifest.sample.json --model models/sample.onnx --engine onnxruntime --device cpu --batch 1 --height 224 --width 224 --warmup 1 --runs 1 --output auto
+```
+
+ONNX Runtime linked example:
+
+```bash
+./build-ort/inferedge-runtime --manifest examples/manifest.sample.json --model /path/to/model.onnx --engine onnxruntime --device cpu --batch 1 --height 224 --width 224 --warmup 3 --runs 10 --output auto
+```
+
 Draft manifest schema direction:
 
     schema_version: inferedge-forge-manifest-v1
@@ -300,6 +322,7 @@ Forge -> Runtime -> Lab flow:
 - [x] GitHub Actions CI smoke tests
 - [x] Auto result naming and latest.json handoff
 - [x] Manifest path recording for Forge handoff preparation
+- [x] Example Forge manifest
 - [ ] Forge manifest parsing and config auto-apply
 - [ ] TensorRT backend on Jetson
 - [ ] InferEdgeLab direct import workflow
