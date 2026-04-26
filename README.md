@@ -215,6 +215,12 @@ ONNX Runtime example:
 
 TensorRT linked builds use the same `--input` path to fill TensorRT input buffers when OpenCV support is enabled. If `--input` is provided without OpenCV support, Runtime fails with a clear configuration error instead of silently falling back to dummy input.
 
+Runtime records input mode metadata under JSON `extra`:
+
+- `input_mode`: `dummy` or `image`
+- `input_path`: the provided image path, or an empty string for dummy mode
+- `input_preprocess`: `opencv_bgr_to_rgb_resize_float32_nchw` or `dummy_zero_float32`
+
 TensorRT stub example:
 
 ```bash

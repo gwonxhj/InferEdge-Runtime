@@ -29,6 +29,18 @@ struct RuntimeConfig {
     bool width_overridden = false;
     bool show_help = false;
     bool show_version = false;
+
+    bool has_real_input() const {
+        return !input_path.empty();
+    }
+
+    std::string input_mode() const {
+        return has_real_input() ? "image" : "dummy";
+    }
+
+    std::string input_preprocess() const {
+        return has_real_input() ? "opencv_bgr_to_rgb_resize_float32_nchw" : "dummy_zero_float32";
+    }
 };
 
 void print_help();
