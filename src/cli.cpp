@@ -34,7 +34,7 @@ bool is_supported_engine(const std::string& engine) {
 }
 
 bool is_supported_device(const std::string& device) {
-    return device == "cpu";
+    return device == "cpu" || device == "jetson" || device == "cuda";
 }
 
 void validate_engine(const std::string& engine) {
@@ -46,7 +46,7 @@ void validate_engine(const std::string& engine) {
 
 void validate_device(const std::string& device) {
     if (!is_supported_device(device)) {
-        throw std::invalid_argument("unsupported device: " + device + " (supported: cpu)");
+        throw std::invalid_argument("unsupported device: " + device + " (supported: cpu, jetson, cuda)");
     }
 }
 
@@ -108,7 +108,7 @@ void print_help() {
         << "  --manifest <path>      Optional Forge/build manifest path used for default runtime config\n"
         << "  --model <path>         Path to an input model file\n"
         << "  --engine <name>        Runtime engine name (supported: onnxruntime, ort, tensorrt, trt; default: onnxruntime)\n"
-        << "  --device <name>        Target device name (supported: cpu; default: cpu)\n"
+        << "  --device <name>        Target device name (supported: cpu, jetson, cuda; default: cpu)\n"
         << "  --batch <n>            Dummy input batch size, n >= 1 (default: 1)\n"
         << "  --height <n>           Dummy input height, n >= 1 (default: 224)\n"
         << "  --width <n>            Dummy input width, n >= 1 (default: 224)\n"
@@ -219,21 +219,32 @@ int run_cli(const RuntimeConfig& config) {
     std::cout << "\nBenchmark\n";
     BenchmarkResult result;
     if (metadata.available) {
-        result = engine->benchmark(config.warmup, config.runs);
-        std::cout
-            << "  status: success\n"
-            << "  warmup: " << result.warmup_runs << '\n'
-            << "  runs: " << result.timed_runs << '\n'
-            << std::fixed << std::setprecision(3)
-            << "  latency_ms:\n"
-            << "    mean: " << result.mean_ms << '\n'
-            << "    min: " << result.min_ms << '\n'
-            << "    max: " << result.max_ms << '\n'
-            << "    std: " << result.std_ms << '\n'
-            << "    p50: " << result.p50_ms << '\n'
-            << "    p90: " << result.p90_ms << '\n'
-            << "    p99: " << result.p99_ms << '\n'
-            << "  fps: " << result.fps << '\n';
+        try {
+            result = engine->benchmark(config.warmup, config.runs);
+            std::cout
+                << "  status: success\n"
+                << "  warmup: " << result.warmup_runs << '\n'
+                << "  runs: " << result.timed_runs << '\n'
+                << std::fixed << std::setprecision(3)
+                << "  latency_ms:\n"
+                << "    mean: " << result.mean_ms << '\n'
+                << "    min: " << result.min_ms << '\n'
+                << "    max: " << result.max_ms << '\n'
+                << "    std: " << result.std_ms << '\n'
+                << "    p50: " << result.p50_ms << '\n'
+                << "    p90: " << result.p90_ms << '\n'
+                << "    p99: " << result.p99_ms << '\n'
+                << "  fps: " << result.fps << '\n';
+        } catch (const std::runtime_error& error) {
+            result.success = false;
+            result.status = "skipped";
+            result.message = error.what();
+            result.warmup_runs = config.warmup;
+            result.timed_runs = config.runs;
+            std::cout
+                << "  status: " << result.status << '\n'
+                << "  reason: " << result.message << '\n';
+        }
     } else {
         result.success = false;
         result.status = "skipped";

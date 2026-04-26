@@ -129,7 +129,7 @@ Expected:
 ## TensorRT Stub Smoke Test
 
 ```bash
-./build/inferedge-runtime --model models/sample.engine --engine tensorrt --device cpu --batch 1 --height 224 --width 224 --warmup 1 --runs 1 --output results/tensorrt_stub_smoke.json
+./build/inferedge-runtime --model models/sample.engine --engine tensorrt --device jetson --batch 1 --height 640 --width 640 --warmup 1 --runs 1 --output results/tensorrt_stub_smoke.json
 python3 -m json.tool results/tensorrt_stub_smoke.json > /tmp/tensorrt_stub_smoke_pretty.json
 ```
 
@@ -141,9 +141,38 @@ from pathlib import Path
 data = json.loads(Path("results/tensorrt_stub_smoke.json").read_text())
 assert data["engine_name"] == "tensorrt"
 assert data["engine_backend"] == "tensorrt"
+assert data["device_name"] == "jetson"
 assert data["status"] == "skipped"
 assert data["success"] is False
+assert data["engine"]["available"] is False
 print("tensorrt stub smoke ok")
+PY
+```
+
+## TensorRT Linked Validation Smoke Test
+
+Run this on Jetson after TensorRT and CUDA are installed. This validates compile/link configuration only; TensorRT engine execution is still intentionally not implemented.
+
+```bash
+cmake -S . -B build-trt -DINFEREDGE_ENABLE_TENSORRT=ON
+cmake --build build-trt
+./build-trt/inferedge-runtime --model /home/risenano01/InferEdgeForge/builds/yolov8n__jetson__tensorrt__jetson_fp16/model.engine --engine tensorrt --device jetson --batch 1 --height 640 --width 640 --warmup 1 --runs 1 --output results/tensorrt_link_check.json
+python3 -m json.tool results/tensorrt_link_check.json > /tmp/tensorrt_link_check_pretty.json
+```
+
+```bash
+python3 - <<'PY'
+import json
+from pathlib import Path
+
+data = json.loads(Path("results/tensorrt_link_check.json").read_text())
+assert data["engine_name"] == "tensorrt"
+assert data["engine_backend"] == "tensorrt"
+assert data["device_name"] == "jetson"
+assert data["engine"]["available"] is True
+assert data["status"] == "skipped"
+assert "not implemented" in data["benchmark"]["message"]
+print("jetson tensorrt link validation ok")
 PY
 ```
 
