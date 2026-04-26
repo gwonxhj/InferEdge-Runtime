@@ -2,9 +2,12 @@
 
 #include "inferedge_runtime/engine.hpp"
 
+#include <memory>
 #include <string>
 
 namespace inferedge_runtime {
+
+struct TensorRTEngineImpl;
 
 class TensorRTEngine final : public IInferenceEngine {
 public:
@@ -18,8 +21,7 @@ public:
     BenchmarkResult benchmark(int warmup, int runs) override;
 
 private:
-    RuntimeConfig config_;
-    std::string loaded_model_path_;
+    std::unique_ptr<TensorRTEngineImpl> impl_;
 };
 
 }  // namespace inferedge_runtime
