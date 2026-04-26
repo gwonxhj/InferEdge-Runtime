@@ -15,7 +15,7 @@ InferEdgeRuntime v0.1.0 is a validated MVP release.
 - ONNX Runtime CPU backend: fully functional
 - Benchmark + JSON export: stable
 - Forge/Lab pipeline: partially integrated (manifest + JSON handoff)
-- TensorRT backend: planned (stub only)
+- TensorRT backend: metadata loading on Jetson, inference planned
 
 ## InferEdge Pipeline Position
 
@@ -38,13 +38,13 @@ InferEdgeRuntime v0.1.0 is a validated MVP release.
 - automatic result naming and `results/latest.json` handoff
 - limited manifest default apply for Forge handoff preparation
 - TensorRT backend stub for future Jetson integration
+- TensorRT engine deserialization and metadata extraction on Jetson linked builds
 
 ## Current Limitations
 
 - ONNX Runtime CPU only
 - float32 input only
-- TensorRT backend is stub-only (Jetson implementation planned)
-- no TensorRT engine loading yet
+- TensorRT inference/enqueue is not implemented yet
 - no CUDA buffer/context execution yet
 - OpenCV/CUDA not linked
 - no real image preprocessing yet
@@ -189,15 +189,17 @@ TensorRT stub example:
 
 This command does not execute TensorRT. In the default build, the TensorRT stub reports `available=false` and creates a skipped benchmark JSON result.
 
-Jetson TensorRT link validation build:
+Jetson TensorRT metadata check build:
 
 ```bash
 cmake -S . -B build-trt -DINFEREDGE_ENABLE_TENSORRT=ON
 cmake --build build-trt
-./build-trt/inferedge-runtime --model /home/risenano01/InferEdgeForge/builds/yolov8n__jetson__tensorrt__jetson_fp16/model.engine --engine tensorrt --device jetson --batch 1 --height 640 --width 640 --warmup 1 --runs 1 --output results/tensorrt_link_check.json
+./build-trt/inferedge-runtime --model /home/risenano01/InferEdgeForge/builds/yolov8n__jetson__tensorrt__jetson_fp16/model.engine --engine tensorrt --device jetson --batch 1 --height 640 --width 640 --warmup 1 --runs 1 --output results/tensorrt_metadata_check.json
 ```
 
-When TensorRT and CUDA headers/libraries are found, the TensorRT backend reports `available=true`. Engine deserialization, CUDA buffer allocation, and inference execution are still not implemented, so the benchmark is recorded as skipped with a clear not-implemented message. Real TensorRT engine loading and execution are planned for the Jetson backend stage.
+When TensorRT and CUDA headers/libraries are found, the TensorRT backend reports `available=true`, deserializes the `.engine` file, and records input/output metadata in the result JSON. Expected metadata for the current Forge YOLOv8n TensorRT engine includes input `images` and output `output0`.
+
+CUDA buffer allocation and inference execution are still not implemented, so the benchmark is recorded as skipped with a clear not-implemented message. Real TensorRT enqueue execution is planned for the next Jetson backend stage.
 
 Output modes:
 
@@ -404,8 +406,8 @@ Forge -> Runtime -> Lab flow:
 - [x] TensorRT backend stub
 - [x] TensorRT backend implementation plan
 - [x] TensorRT CMake link validation
-- [ ] TensorRT engine deserialization on Jetson
-- [ ] TensorRT metadata extraction
+- [x] TensorRT engine deserialization on Jetson
+- [x] TensorRT metadata extraction
 - [ ] TensorRT one-shot inference
 - [ ] TensorRT benchmark runner on Jetson
 - [ ] InferEdgeLab direct import workflow

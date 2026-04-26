@@ -9,10 +9,16 @@ On Mac development environments, InferEdgeRuntime should continue to avoid Tenso
 ## Current State
 
 - The ONNX Runtime backend supports CPU model loading, metadata extraction, dummy float32 inference, benchmark execution, JSON export, auto output naming, and `results/latest.json`.
-- The TensorRT backend is currently a stub.
+- The TensorRT backend supports Jetson linked-build `.engine` deserialization and input/output metadata extraction.
 - `--engine tensorrt` and `--engine trt` are accepted by the CLI.
-- TensorRT stub metadata reports `available=false`.
-- TensorRT stub runs produce skipped benchmark JSON results instead of attempting TensorRT execution.
+- Mac/default TensorRT stub metadata reports `available=false`.
+- Jetson linked TensorRT metadata reports `available=true`.
+- TensorRT benchmark execution still produces skipped JSON results instead of attempting TensorRT inference.
+
+Progress note:
+
+- Jetson linked builds can now load TensorRT engine metadata.
+- Inference execution remains future work.
 
 ## Target Runtime Flow
 
@@ -130,7 +136,7 @@ TensorRT implementation errors should be explicit and actionable. Example messag
 
 ## Non-goals
 
-- No TensorRT implementation in this doc step
+- No TensorRT inference implementation in this metadata-loading step
 - No OpenCV preprocessing
 - No real image/video pipeline
 - No RKNN/Hailo backend yet
@@ -140,11 +146,11 @@ TensorRT implementation errors should be explicit and actionable. Example messag
 
 - [x] TensorRT backend stub
 - [x] Add TensorRT CMake option and link validation
-- [ ] Add TensorRT pImpl runtime holder
-- [ ] Load serialized `.engine` file
-- [ ] Deserialize `ICudaEngine`
+- [x] Add TensorRT pImpl runtime holder
+- [x] Load serialized `.engine` file
+- [x] Deserialize `ICudaEngine`
 - [ ] Create execution context
-- [ ] Extract binding/tensor metadata
+- [x] Extract binding/tensor metadata
 - [ ] Allocate buffers
 - [ ] Run one-shot inference
 - [ ] Reuse benchmark runner
