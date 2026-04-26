@@ -29,6 +29,9 @@ struct ModelMetadata {
 };
 
 struct BenchmarkResult {
+    bool success = false;
+    std::string status = "not_run";
+    std::string message;
     int warmup_runs = 0;
     int timed_runs = 0;
     double mean_ms = 0.0;

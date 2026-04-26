@@ -294,6 +294,9 @@ BenchmarkResult OnnxRuntimeEngine::benchmark(int warmup, int runs) {
     }
 
     BenchmarkResult result;
+    result.success = true;
+    result.status = "success";
+    result.message = "benchmark completed";
     result.warmup_runs = warmup;
     result.timed_runs = runs;
     result.samples_ms.reserve(static_cast<std::size_t>(runs));
