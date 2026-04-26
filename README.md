@@ -60,6 +60,19 @@ The `--warmup` option controls untimed warmup iterations. The `--runs` option co
 The `--output` option writes a JSON result file. Missing output directories are created automatically. The JSON schema is designed as the handoff format for InferEdgeLab and includes:
 
 - `schema_version`
+- `model_name`
+- `model_path`
+- `engine_name`
+- `engine_backend`
+- `device_name`
+- `batch`
+- `height`
+- `width`
+- `mean_ms`
+- `p99_ms`
+- `fps_value`
+- `success`
+- `status`
 - `model`
 - `engine`
 - `device`
@@ -71,6 +84,20 @@ The `--output` option writes a JSON result file. Missing output directories are 
 - `system`
 - `model_metadata`
 - `extra`
+
+## InferEdgeLab Compatibility
+
+Runtime JSON results include both nested structured fields and top-level compatibility fields.
+
+The nested fields are intended for detailed reporting and future schema expansion. The top-level compatibility fields are intended for quick comparison in InferEdgeLab and EdgeBench-style loaders without requiring deep nested parsing.
+
+Key compatibility fields include `model_name`, `model_path`, `engine_name`, `engine_backend`, `device_name`, `batch`, `height`, `width`, `mean_ms`, `p99_ms`, `fps_value`, `success`, and `status`.
+
+The intended portfolio pipeline is:
+
+1. InferEdgeForge builds or exports model artifacts.
+2. InferEdgeRuntime runs ONNX Runtime benchmarks and writes JSON results.
+3. InferEdgeLab reads JSON results and compares or reports performance.
 
 In the default non-ORT build, the CLI does not require the model file to exist, prints empty model metadata with `available: false`, and skips inference.
 

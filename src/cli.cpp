@@ -234,12 +234,28 @@ void write_result_json(
     }
 
     output << std::fixed << std::setprecision(6);
+    const std::string model_name = std::filesystem::path(config.model_path).filename().string();
     output
         << "{\n"
         << "  \"schema_version\": \"inferedge-runtime-result-v1\",\n"
+        << "  \"model_name\": " << json_string(model_name) << ",\n"
+        << "  \"model_path\": " << json_string(config.model_path) << ",\n"
+        << "  \"engine_name\": " << json_string(engine_metadata.name) << ",\n"
+        << "  \"engine_backend\": " << json_string(engine_metadata.backend) << ",\n"
+        << "  \"device_name\": " << json_string(config.device) << ",\n"
+        << "  \"batch\": " << config.batch << ",\n"
+        << "  \"height\": " << config.height << ",\n"
+        << "  \"width\": " << config.width << ",\n"
+        << "  \"warmup\": " << config.warmup << ",\n"
+        << "  \"runs\": " << config.runs << ",\n"
+        << "  \"mean_ms\": " << benchmark_result.mean_ms << ",\n"
+        << "  \"p99_ms\": " << benchmark_result.p99_ms << ",\n"
+        << "  \"fps_value\": " << benchmark_result.fps << ",\n"
+        << "  \"success\": " << (benchmark_result.success ? "true" : "false") << ",\n"
+        << "  \"status\": " << json_string(benchmark_result.status) << ",\n"
         << "  \"model\": {\n"
         << "    \"path\": " << json_string(config.model_path) << ",\n"
-        << "    \"name\": " << json_string(std::filesystem::path(config.model_path).filename().string()) << "\n"
+        << "    \"name\": " << json_string(model_name) << "\n"
         << "  },\n"
         << "  \"engine\": {\n"
         << "    \"name\": " << json_string(engine_metadata.name) << ",\n"
