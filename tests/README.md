@@ -250,6 +250,19 @@ print("jetson tensorrt benchmark ok")
 PY
 ```
 
+## Benchmark Policy Check
+
+TensorRT benchmark values from InferEdgeRuntime should not be directly compared with `trtexec` GPU latency. Runtime latency can be larger because it measures an end-to-end wall-clock path that includes memory transfers and synchronization overhead.
+
+Normal validation criteria:
+
+- JSON `status` is `success`
+- `mean_ms > 0`
+- `p99_ms > 0`
+- `fps_value > 0`
+- `latency_ms.samples` length matches `runs`
+- values do not swing wildly under the same model, device, and run configuration
+
 ## JSON Validity Test
 
 ```bash

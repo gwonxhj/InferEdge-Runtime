@@ -94,6 +94,10 @@ Expected CMake policy:
 
 - Warmup runs are untimed.
 - Timed runs collect latency samples.
+- InferEdgeRuntime TensorRT benchmark latency is end-to-end latency, not pure GPU compute latency.
+- Current measurements include host/device transfer and synchronization overhead.
+- Do not directly compare InferEdgeRuntime latency with `trtexec` GPU latency.
+- This policy is intentional so ONNX Runtime and TensorRT can be compared from the same Runtime perspective.
 - TensorRT should populate the same `BenchmarkResult` fields as ONNX Runtime:
   - `mean_ms`
   - `min_ms`
