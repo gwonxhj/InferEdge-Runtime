@@ -8,6 +8,15 @@ InferEdgeRuntime is a C++ Edge AI runtime for on-device inference and benchmarki
 
 It is the Runtime stage of the InferEdge portfolio pipeline. InferEdgeForge prepares model artifacts, InferEdgeRuntime runs and benchmarks those artifacts on target devices, and InferEdgeLab analyzes the exported result JSON files.
 
+## Release Status
+
+InferEdgeRuntime v0.1.0 is a validated MVP release.
+
+- ONNX Runtime CPU backend: fully functional
+- Benchmark + JSON export: stable
+- Forge/Lab pipeline: partially integrated (manifest + JSON handoff)
+- TensorRT backend: planned (stub only)
+
 ## InferEdge Pipeline Position
 
 1. Forge: Build / Convert / Metadata
@@ -34,14 +43,14 @@ It is the Runtime stage of the InferEdge portfolio pipeline. InferEdgeForge prep
 
 - ONNX Runtime CPU only
 - float32 input only
-- TensorRT backend is stub-only
+- TensorRT backend is stub-only (Jetson implementation planned)
 - no TensorRT engine loading yet
 - no CUDA buffer/context execution yet
 - OpenCV/CUDA not linked
 - no real image preprocessing yet
 - manifest parsing is limited to the sample Forge handoff schema
 - no full general-purpose JSON parser yet
-- no full unit test suite yet
+- no full unit test suite yet (CI smoke test only)
 - GitHub Actions currently runs default smoke test only
 - ORT linked smoke test remains local/manual because it requires external ONNX Runtime and model files
 
@@ -326,6 +335,7 @@ Forge -> Runtime -> Lab flow:
 ```text
 .
 ├── CMakeLists.txt
+├── CHANGELOG.md
 ├── include/
 │   └── inferedge_runtime/
 │       ├── cli.hpp
@@ -349,6 +359,7 @@ Forge -> Runtime -> Lab flow:
 │   ├── smoke_default.sh
 │   └── smoke_ort.sh
 ├── docs/
+│   ├── mvp_validation.md
 │   └── tensorrt_backend_plan.md
 ├── examples/
 │   └── README.md
@@ -378,3 +389,9 @@ Forge -> Runtime -> Lab flow:
 - [ ] TensorRT engine loading on Jetson
 - [ ] TensorRT benchmark runner on Jetson
 - [ ] InferEdgeLab direct import workflow
+
+## Version
+
+Current version: v0.1.0 (MVP)
+
+See [CHANGELOG.md](CHANGELOG.md) for details.
