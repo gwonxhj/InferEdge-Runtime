@@ -1,6 +1,24 @@
 # Tests
 
-InferEdgeRuntime does not have an automated test suite yet. Use this manual smoke test checklist before opening a PR.
+InferEdgeRuntime does not have a GitHub Actions CI suite yet. Use the scripted smoke tests first, then fall back to the manual checklist when debugging a specific failure.
+
+## Recommended Smoke Scripts
+
+Default dependency-free build:
+
+```bash
+scripts/smoke_default.sh
+```
+
+ONNX Runtime linked build with a local package and model:
+
+```bash
+scripts/smoke_ort.sh "$HOME/onnxruntime/onnxruntime-osx-arm64-1.25.0" /path/to/model.onnx
+```
+
+The scripts validate build success, CLI execution, JSON validity, Lab-compatible top-level fields, and benchmark status.
+
+## Manual Smoke Checklist
 
 ## Build Smoke Test
 
