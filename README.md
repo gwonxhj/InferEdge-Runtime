@@ -10,11 +10,11 @@ This repository is part of the InferEdge portfolio pipeline:
 
 ## Current Stage
 
-The current stage is **ONNX Runtime benchmark runner**.
+The current stage is **ONNX Runtime benchmark runner with JSON export**.
 
-This version provides a minimal C++17 and CMake-based command-line interface. It parses runtime options, validates supported engine/device values and numeric ranges, creates an inference engine, prints backend and model metadata, then runs warmup iterations followed by timed ONNX Runtime inference runs when ONNX Runtime is linked.
+This version provides a minimal C++17 and CMake-based command-line interface. It parses runtime options, validates supported engine/device values and numeric ranges, creates an inference engine, prints backend and model metadata, runs warmup iterations followed by timed ONNX Runtime inference runs when ONNX Runtime is linked, and writes a structured JSON result file to `--output`.
 
-The CLI reports latency mean, min, max, population standard deviation, p50, p90, p99, and FPS. JSON export is not implemented yet. TensorRT, OpenCV, CUDA, and other external runtime dependencies are intentionally not linked at this stage.
+The CLI reports latency mean, min, max, population standard deviation, p50, p90, p99, and FPS. TensorRT, OpenCV, CUDA, and other external runtime dependencies are intentionally not linked at this stage.
 
 ## Build
 
@@ -43,7 +43,7 @@ When `INFEREDGE_ENABLE_ORT=ON`, `INFEREDGE_ORT_ROOT` must point to an external O
 
 This project intentionally uses an external dependency path to reflect real-world deployment environments where runtime libraries are managed outside of the application repository.
 
-At the current stage, a linked ONNX Runtime backend creates an `Ort::Env` and persistent `Ort::Session`, loads the supplied ONNX model file, prints input/output names, element types, and shapes, creates float32 dummy input tensors, executes warmup runs, and measures timed inference latency. It does not export JSON yet.
+At the current stage, a linked ONNX Runtime backend creates an `Ort::Env` and persistent `Ort::Session`, loads the supplied ONNX model file, prints input/output names, element types, and shapes, creates float32 dummy input tensors, executes warmup runs, measures timed inference latency, and exports a JSON result for InferEdgeLab analysis.
 
 ## Usage
 
@@ -56,6 +56,21 @@ At the current stage, a linked ONNX Runtime backend creates an `Ort::Env` and pe
 The `--batch`, `--height`, and `--width` options are used to resolve dynamic dummy input dimensions. Dynamic or zero dimensions are resolved as batch for dimension 0, `3` for dimension 1, height for dimension 2, width for dimension 3, and `1` for later dimensions. Static model dimensions take precedence over CLI overrides.
 
 The `--warmup` option controls untimed warmup iterations. The `--runs` option controls timed inference iterations used to calculate latency and FPS statistics.
+
+The `--output` option writes a JSON result file. Missing output directories are created automatically. The JSON schema is designed as the handoff format for InferEdgeLab and includes:
+
+- `schema_version`
+- `model`
+- `engine`
+- `device`
+- `run_config`
+- `latency_ms`
+- `fps`
+- `benchmark`
+- `timestamp`
+- `system`
+- `model_metadata`
+- `extra`
 
 In the default non-ORT build, the CLI does not require the model file to exist, prints empty model metadata with `available: false`, and skips inference.
 
