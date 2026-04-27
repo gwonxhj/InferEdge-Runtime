@@ -88,6 +88,8 @@ Top-level compatibility fields for quick comparison:
 - `engine_name`
 - `device_name`
 - `mean_ms`
+- `p50_ms`
+- `p95_ms`
 - `p99_ms`
 - `fps_value`
 - `success`

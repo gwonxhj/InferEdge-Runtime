@@ -32,7 +32,7 @@ InferEdgeRuntime v0.1.0 is a validated MVP release.
 - float32 dummy input generation
 - optional OpenCV-based real image input preprocessing
 - ONNX Runtime CPU inference benchmark
-- latency mean/min/max/std/p50/p90/p99
+- latency mean/min/max/std/p50/p90/p95/p99
 - FPS calculation
 - JSON result export
 - Lab-compatible top-level fields
@@ -284,7 +284,7 @@ Every run also writes the same JSON content to `results/latest.json`. This stabl
 
 ## JSON Result Schema
 
-Runtime JSON results include nested structured fields for detailed reporting and top-level compatibility fields for quick comparison.
+Runtime JSON results include nested structured fields for detailed reporting and top-level compatibility fields for quick comparison. This output is the Runtime side of the Forge -> Runtime -> Lab contract documented by InferEdgeLab, and is intended to be consumed by Lab compare, report, and deployment decision flows.
 
 Main nested fields:
 
@@ -332,10 +332,14 @@ Top-level compatibility fields:
 - `height`
 - `width`
 - `mean_ms`
+- `p50_ms`
+- `p95_ms`
 - `p99_ms`
 - `fps_value`
 - `success`
 - `status`
+
+The schema regression fixture lives at `tests/fixtures/lab_compatible_result.json`, and `tests/test_lab_result_schema.py` validates both the fixture and smoke-generated Runtime JSON.
 
 See [examples/README.md](examples/README.md) for command examples and compact JSON field notes.
 
@@ -422,6 +426,7 @@ Runtime does not perform comparison calculations. It only writes compare-ready m
 - `compare_key`: groups results from the same model and input condition, such as `toy224__b1__h224w224__fp32`
 - `backend_key`: identifies the backend/device pair, such as `onnxruntime__cpu` or `tensorrt__jetson`
 - `runtime_role`: fixed to `runtime-result`
+- top-level latency aliases: `mean_ms`, `p50_ms`, `p95_ms`, and `p99_ms`
 
 The model component of `compare_key` prefers manifest `artifact.model_name` when available, then falls back to the CLI `--model` path stem. This lets TensorRT artifacts with generic filenames such as `model.engine` still produce a model-specific key like `yolov8n__b1__h640w640__fp32` when Forge supplies `artifact.model_name`.
 

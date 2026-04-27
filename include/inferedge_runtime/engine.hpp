@@ -40,6 +40,7 @@ struct BenchmarkResult {
     double std_ms = 0.0;
     double p50_ms = 0.0;
     double p90_ms = 0.0;
+    double p95_ms = 0.0;
     double p99_ms = 0.0;
     double fps = 0.0;
     std::vector<double> samples_ms;

@@ -78,6 +78,8 @@ required = [
     "height",
     "width",
     "mean_ms",
+    "p50_ms",
+    "p95_ms",
     "p99_ms",
     "fps_value",
     "success",
@@ -88,9 +90,13 @@ assert not missing, missing
 assert data["status"] == "success", data["status"]
 assert data["success"] is True, data["success"]
 assert data["mean_ms"] > 0, data["mean_ms"]
+assert data["p50_ms"] > 0, data["p50_ms"]
+assert data["p95_ms"] > 0, data["p95_ms"]
 assert data["p99_ms"] > 0, data["p99_ms"]
 assert data["fps_value"] > 0, data["fps_value"]
 assert len(data["latency_ms"]["samples"]) == 10, data["latency_ms"]["samples"]
 PY
+
+INFEREDGE_RUNTIME_RESULT_JSON="${OUTPUT_PATH}" python3 tests/test_lab_result_schema.py
 
 echo "[smoke_ort] success"

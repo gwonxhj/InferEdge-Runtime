@@ -18,6 +18,8 @@ scripts/smoke_ort.sh "$HOME/onnxruntime/onnxruntime-osx-arm64-1.25.0" /path/to/m
 
 The scripts validate build success, CLI execution, JSON validity, Lab-compatible top-level fields, and benchmark status.
 
+The Lab-compatible result contract is also covered by `tests/test_lab_result_schema.py` and `tests/fixtures/lab_compatible_result.json`. The default smoke script validates the committed fixture and the generated `results/smoke_default.json` with the same checker.
+
 ## Manual Smoke Checklist
 
 ## Build Smoke Test

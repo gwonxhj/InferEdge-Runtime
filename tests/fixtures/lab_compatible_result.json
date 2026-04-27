@@ -1,0 +1,104 @@
+{
+  "schema_version": "inferedge-runtime-result-v1",
+  "compare_key": "yolov8n__b1__h640w640__fp32",
+  "backend_key": "onnxruntime__cpu",
+  "runtime_role": "runtime-result",
+  "manifest_path": "examples/manifest.sample.json",
+  "manifest_applied": true,
+  "model_name": "yolov8n.onnx",
+  "model_path": "models/yolov8n.onnx",
+  "engine_name": "onnxruntime",
+  "engine_backend": "onnxruntime",
+  "device_name": "cpu",
+  "batch": 1,
+  "height": 640,
+  "width": 640,
+  "warmup": 3,
+  "runs": 10,
+  "mean_ms": 12.345,
+  "p50_ms": 12.1,
+  "p95_ms": 13.8,
+  "p99_ms": 14.2,
+  "fps_value": 81.004,
+  "success": true,
+  "status": "success",
+  "model": {
+    "path": "models/yolov8n.onnx",
+    "name": "yolov8n.onnx"
+  },
+  "engine": {
+    "name": "onnxruntime",
+    "backend": "onnxruntime",
+    "available": true,
+    "status_message": "ONNX Runtime backend is available."
+  },
+  "device": {
+    "name": "cpu"
+  },
+  "precision": "fp32",
+  "run_config": {
+    "batch": 1,
+    "height": 640,
+    "width": 640,
+    "warmup": 3,
+    "runs": 10,
+    "manifest_path": "examples/manifest.sample.json",
+    "manifest_applied": true
+  },
+  "latency_ms": {
+    "mean": 12.345,
+    "min": 11.9,
+    "max": 14.2,
+    "std": 0.7,
+    "p50": 12.1,
+    "p90": 13.5,
+    "p95": 13.8,
+    "p99": 14.2,
+    "samples": [11.9, 12.1, 12.4, 13.8, 14.2]
+  },
+  "fps": 81.004,
+  "benchmark": {
+    "success": true,
+    "status": "success",
+    "message": "benchmark completed"
+  },
+  "timestamp": "2026-04-27T00:00:00Z",
+  "system": {
+    "os": "linux",
+    "compiler": "GCC",
+    "cpp_standard": "17"
+  },
+  "model_metadata": {
+    "inputs": [
+      {
+        "name": "images",
+        "element_type": "float32",
+        "shape": [1, 3, 640, 640]
+      }
+    ],
+    "outputs": [
+      {
+        "name": "output0",
+        "element_type": "float32",
+        "shape": [1, 84, 8400]
+      }
+    ]
+  },
+  "extra": {
+    "runtime": "inferedge-runtime",
+    "json_export": "enabled",
+    "output_mode": "explicit",
+    "latest_path": "results/latest.json",
+    "manifest_recorded": true,
+    "manifest_precision": "fp32",
+    "manifest_format": "onnx",
+    "input_mode": "dummy",
+    "input_path": "",
+    "input_preprocess": "dummy_zero_float32",
+    "compare_ready": true,
+    "compare_key": "yolov8n__b1__h640w640__fp32",
+    "backend_key": "onnxruntime__cpu",
+    "compare_model_source": "manifest_model_name",
+    "compare_model_name": "yolov8n"
+  }
+}
