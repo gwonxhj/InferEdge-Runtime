@@ -20,6 +20,8 @@ The scripts validate build success, CLI execution, JSON validity, Lab-compatible
 
 The Lab-compatible result contract is also covered by `tests/test_lab_result_schema.py` and `tests/fixtures/lab_compatible_result.json`. The default smoke script validates the committed fixture and the generated `results/smoke_default.json` with the same checker.
 
+Forge handoff parsing is covered by `tests/test_forge_handoff.py` and `scripts/smoke_forge_handoff.sh`. The smoke script validates Forge-style `metadata.json` and `manifest.json` fixtures, checks a missing-field failure case, and confirms the generated Runtime JSON preserves Forge provenance fields.
+
 ## Manual Smoke Checklist
 
 ## Build Smoke Test

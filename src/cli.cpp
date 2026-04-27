@@ -106,6 +106,9 @@ void print_help() {
         << "  -h, --help             Show this help message\n"
         << "  --version              Show version information\n"
         << "  --manifest <path>      Optional Forge/build manifest path used for default runtime config\n"
+        << "  --forge-manifest <path> Alias for --manifest using Forge manifest.json handoff\n"
+        << "  --forge-metadata <path> Optional Forge metadata.json handoff path used for default runtime config\n"
+        << "  --validate-forge-handoff Validate Forge handoff input and exit without execution\n"
         << "  --model <path>         Path to an input model file\n"
         << "  --input <image_path>   Optional real image input path (requires OpenCV-enabled build)\n"
         << "  --engine <name>        Runtime engine name (supported: onnxruntime, ort, tensorrt, trt; default: onnxruntime)\n"
@@ -135,6 +138,12 @@ RuntimeConfig parse_args(int argc, char** argv) {
             config.show_version = true;
         } else if (option == "--manifest") {
             config.manifest_path = require_value(argc, argv, i, option);
+        } else if (option == "--forge-manifest") {
+            config.forge_manifest_path = require_value(argc, argv, i, option);
+        } else if (option == "--forge-metadata") {
+            config.forge_metadata_path = require_value(argc, argv, i, option);
+        } else if (option == "--validate-forge-handoff") {
+            config.validate_forge_handoff = true;
         } else if (option == "--model") {
             config.model_path = require_value(argc, argv, i, option);
             config.model_path_overridden = true;
@@ -170,11 +179,28 @@ RuntimeConfig parse_args(int argc, char** argv) {
         }
     }
 
+    const int handoff_count =
+        (config.manifest_path.empty() ? 0 : 1) +
+        (config.forge_manifest_path.empty() ? 0 : 1) +
+        (config.forge_metadata_path.empty() ? 0 : 1);
+    if (handoff_count > 1) {
+        throw std::invalid_argument(
+            "use only one Forge handoff option: --manifest, --forge-manifest, or --forge-metadata");
+    }
+
+    ManifestConfig manifest;
+    if (!config.forge_metadata_path.empty()) {
+        config.manifest_path = config.forge_metadata_path;
+        manifest = load_forge_metadata_config(config.forge_metadata_path);
+    } else if (!config.forge_manifest_path.empty()) {
+        config.manifest_path = config.forge_manifest_path;
+        manifest = load_manifest_config(config.forge_manifest_path);
+    } else if (!config.manifest_path.empty()) {
+        manifest = load_manifest_config(config.manifest_path);
+    }
+
     if (!config.manifest_path.empty()) {
-        const ManifestConfig manifest = load_manifest_config(config.manifest_path);
         apply_manifest_defaults(config, manifest);
-        config.manifest_precision = manifest.precision;
-        config.manifest_format = manifest.format;
         config.manifest_applied = true;
     }
 
@@ -185,6 +211,31 @@ RuntimeConfig parse_args(int argc, char** argv) {
 }
 
 int run_cli(const RuntimeConfig& config) {
+    if (config.validate_forge_handoff) {
+        if (config.manifest_path.empty()) {
+            std::cerr << "Forge handoff path is required for --validate-forge-handoff\n";
+            return 1;
+        }
+
+        std::cout
+            << "Forge handoff validation\n"
+            << "  path: " << config.manifest_path << '\n'
+            << "  model: " << config.model_path << '\n'
+            << "  engine: " << config.engine << '\n'
+            << "  device: " << config.device << '\n'
+            << "  precision: " << config.manifest_precision << '\n'
+            << "  format: " << config.manifest_format << '\n'
+            << "  batch: " << config.batch << '\n'
+            << "  height: " << config.height << '\n'
+            << "  width: " << config.width << '\n'
+            << "  preset: " << config.manifest_preset_name << '\n'
+            << "  build_id: " << config.manifest_build_id << '\n'
+            << "  artifact_sha256: " << config.manifest_artifact_sha256 << '\n'
+            << "  source_sha256: " << config.manifest_source_sha256 << '\n'
+            << "  status: ok\n";
+        return 0;
+    }
+
     if (config.model_path.empty()) {
         std::cerr << "model path is required for benchmark execution\n";
         return 1;

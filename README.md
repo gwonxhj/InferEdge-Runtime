@@ -343,25 +343,32 @@ The schema regression fixture lives at `tests/fixtures/lab_compatible_result.jso
 
 See [examples/README.md](examples/README.md) for command examples and compact JSON field notes.
 
-## Forge Manifest Handoff Preparation
+## Forge Handoff Input Preparation
 
-Runtime can now record a manifest path produced by Forge or another build stage and apply a limited set of manifest values as default runtime config. CLI-provided values always take priority over manifest defaults.
+Runtime can now record a manifest path produced by Forge or another build stage and apply a limited set of manifest values as default runtime config. It can also validate Forge `metadata.json` / `manifest.json` handoff fixtures without executing an artifact. CLI-provided values always take priority over handoff defaults.
 
 Sample manifest:
 
 - `examples/manifest.sample.json`
+- `tests/fixtures/forge_handoff_manifest.json`
+- `tests/fixtures/forge_handoff_metadata.json`
 
 Current behavior:
 
 - Runtime records the `--manifest` path in the result JSON.
-- Runtime reads limited defaults from `examples/manifest.sample.json` style manifests.
-- Runtime applies manifest defaults only when the same value was not provided directly by CLI.
+- Runtime reads limited defaults from `examples/manifest.sample.json` and Forge `manifest.json` style handoffs.
+- Runtime can read Forge `metadata.json` with `--forge-metadata`.
+- Runtime applies handoff defaults only when the same value was not provided directly by CLI.
+- `--validate-forge-handoff` parses and validates the handoff input, then exits before execution.
 
 Applied manifest fields:
 
 - `artifact.model_path`
+- `artifact.path`
+- `lab_compat.runtime.runtime_artifact_path`
 - `runtime.engine`
 - `runtime.device`
+- `runtime.precision`
 - `runtime.batch`
 - `runtime.height`
 - `runtime.width`
@@ -370,6 +377,10 @@ Recorded-only manifest fields:
 
 - `artifact.precision`
 - `artifact.format`
+- `artifact.sha256`
+- `source_model.sha256`
+- `build.preset_name`
+- `build.build_id`
 
 Compare-key manifest fields:
 
@@ -386,6 +397,13 @@ Default build example:
 
 ```bash
 ./build/inferedge-runtime --manifest examples/manifest.sample.json --output auto
+```
+
+Forge handoff validation examples:
+
+```bash
+./build/inferedge-runtime --forge-manifest tests/fixtures/forge_handoff_manifest.json --validate-forge-handoff
+./build/inferedge-runtime --forge-metadata tests/fixtures/forge_handoff_metadata.json --validate-forge-handoff
 ```
 
 The sample manifest uses `/path/to/model.onnx` as a placeholder. For a real run, either edit a local manifest outside the repository to point at a real model or override the model path from the CLI.
