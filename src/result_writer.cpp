@@ -121,8 +121,10 @@ std::string compare_model_source(const RuntimeConfig& config) {
 
 std::string make_compare_key(const RuntimeConfig& config) {
     const std::string model_stem = compare_model_name(config);
+    const std::string precision = config.manifest_precision.empty() ? "fp32" : config.manifest_precision;
     return model_stem + "__b" + std::to_string(config.batch) + "__h" +
-           std::to_string(config.height) + "w" + std::to_string(config.width) + "__fp32";
+           std::to_string(config.height) + "w" + std::to_string(config.width) + "__" +
+           sanitize_filename_component(precision);
 }
 
 std::string make_backend_key(const EngineMetadata& engine_metadata, const RuntimeConfig& config) {
@@ -237,6 +239,7 @@ std::filesystem::path write_result_json(
     const std::string backend_key = make_backend_key(engine_metadata, config);
     const std::string compare_name = compare_model_name(config);
     const std::string compare_source = compare_model_source(config);
+    const std::string precision = config.manifest_precision.empty() ? "fp32" : config.manifest_precision;
 
     std::ostringstream output;
     output << std::fixed << std::setprecision(6);
@@ -279,7 +282,7 @@ std::filesystem::path write_result_json(
         << "  \"device\": {\n"
         << "    \"name\": " << json_string(config.device) << "\n"
         << "  },\n"
-        << "  \"precision\": \"fp32\",\n"
+        << "  \"precision\": " << json_string(precision) << ",\n"
         << "  \"run_config\": {\n"
         << "    \"batch\": " << config.batch << ",\n"
         << "    \"height\": " << config.height << ",\n"
@@ -332,6 +335,11 @@ std::filesystem::path write_result_json(
         << "    \"manifest_recorded\": " << (config.manifest_path.empty() ? "false" : "true") << ",\n"
         << "    \"manifest_precision\": " << json_string(config.manifest_precision) << ",\n"
         << "    \"manifest_format\": " << json_string(config.manifest_format) << ",\n"
+        << "    \"manifest_preset_name\": " << json_string(config.manifest_preset_name) << ",\n"
+        << "    \"manifest_build_id\": " << json_string(config.manifest_build_id) << ",\n"
+        << "    \"source_model_sha256\": " << json_string(config.manifest_source_sha256) << ",\n"
+        << "    \"runtime_artifact_sha256\": " << json_string(config.manifest_artifact_sha256) << ",\n"
+        << "    \"runtime_artifact_path\": " << json_string(config.model_path) << ",\n"
         << "    \"input_mode\": " << json_string(config.input_mode()) << ",\n"
         << "    \"input_path\": " << json_string(config.input_path) << ",\n"
         << "    \"input_preprocess\": " << json_string(config.input_preprocess()) << ",\n"

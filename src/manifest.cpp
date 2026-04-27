@@ -168,24 +168,103 @@ ManifestConfig load_manifest_config(const std::string& path) {
     }
 
     const std::string json = read_text_file(path);
+    const std::string build = find_object_section(json, "build");
+    const std::string source_model = find_object_section(json, "source_model");
     const std::string artifact = find_object_section(json, "artifact");
     const std::string runtime = find_object_section(json, "runtime");
 
     manifest.model_path = extract_json_string_value(artifact, "model_path");
+    if (manifest.model_path.empty()) {
+        manifest.model_path = extract_json_string_value(artifact, "path");
+    }
     manifest.model_name = extract_json_string_value(artifact, "model_name");
     manifest.precision = extract_json_string_value(artifact, "precision");
+    if (manifest.precision.empty()) {
+        manifest.precision = extract_json_string_value(runtime, "precision");
+    }
     manifest.format = extract_json_string_value(artifact, "format");
+    manifest.artifact_sha256 = extract_json_string_value(artifact, "sha256");
+    manifest.source_model_path = extract_json_string_value(source_model, "path");
+    manifest.source_model_sha256 = extract_json_string_value(source_model, "sha256");
+    manifest.preset_name = extract_json_string_value(build, "preset_name");
+    manifest.build_id = extract_json_string_value(build, "build_id");
     manifest.engine = extract_json_string_value(runtime, "engine");
     manifest.device = extract_json_string_value(runtime, "device");
     manifest.batch = extract_json_int_value(runtime, "batch");
     manifest.height = extract_json_int_value(runtime, "height");
     manifest.width = extract_json_int_value(runtime, "width");
+    manifest.handoff_kind = "manifest";
+
+    validate_forge_handoff_config(manifest, path);
 
     return manifest;
 }
 
+ManifestConfig load_forge_metadata_config(const std::string& path) {
+    ManifestConfig manifest;
+    if (path.empty()) {
+        return manifest;
+    }
+
+    const std::string json = read_text_file(path);
+    const std::string build = find_object_section(json, "build");
+    const std::string source_model = find_object_section(json, "source_model");
+    const std::string artifact = find_object_section(json, "artifacts");
+    const std::string runtime = find_object_section(json, "runtime");
+
+    manifest.model_path = extract_json_string_value(runtime, "runtime_artifact_path");
+    if (manifest.model_path.empty()) {
+        manifest.model_path = extract_json_string_value(runtime, "engine_path");
+    }
+    if (manifest.model_path.empty()) {
+        manifest.model_path = extract_json_string_value(artifact, "path");
+    }
+    manifest.model_name = extract_json_string_value(source_model, "path");
+    manifest.precision = extract_json_string_value(runtime, "precision");
+    manifest.format = extract_json_string_value(artifact, "format");
+    manifest.artifact_sha256 = extract_json_string_value(artifact, "sha256");
+    manifest.source_model_path = extract_json_string_value(source_model, "path");
+    manifest.source_model_sha256 = extract_json_string_value(source_model, "sha256");
+    manifest.preset_name = extract_json_string_value(build, "preset_name");
+    manifest.build_id = extract_json_string_value(build, "build_id");
+    manifest.engine = extract_json_string_value(runtime, "engine");
+    manifest.device = extract_json_string_value(runtime, "device");
+    manifest.batch = extract_json_int_value(runtime, "requested_batch");
+    manifest.height = extract_json_int_value(runtime, "requested_height");
+    manifest.width = extract_json_int_value(runtime, "requested_width");
+    manifest.handoff_kind = "metadata";
+
+    validate_forge_handoff_config(manifest, path);
+
+    return manifest;
+}
+
+void validate_forge_handoff_config(const ManifestConfig& manifest, const std::string& path) {
+    if (manifest.model_path.empty()) {
+        throw std::runtime_error("Forge handoff is missing artifact model path: " + path);
+    }
+    if (manifest.engine.empty()) {
+        throw std::runtime_error("Forge handoff is missing runtime engine/backend: " + path);
+    }
+    if (manifest.device.empty()) {
+        throw std::runtime_error("Forge handoff is missing runtime device/target: " + path);
+    }
+    if (manifest.precision.empty()) {
+        throw std::runtime_error("Forge handoff is missing artifact precision: " + path);
+    }
+    if (manifest.format.empty()) {
+        throw std::runtime_error("Forge handoff is missing artifact format: " + path);
+    }
+}
+
 void apply_manifest_defaults(RuntimeConfig& config, const ManifestConfig& manifest) {
     config.manifest_model_name = manifest.model_name;
+    config.manifest_precision = manifest.precision;
+    config.manifest_format = manifest.format;
+    config.manifest_artifact_sha256 = manifest.artifact_sha256;
+    config.manifest_source_sha256 = manifest.source_model_sha256;
+    config.manifest_preset_name = manifest.preset_name;
+    config.manifest_build_id = manifest.build_id;
 
     if (!config.model_path_overridden && !manifest.model_path.empty()) {
         config.model_path = manifest.model_path;

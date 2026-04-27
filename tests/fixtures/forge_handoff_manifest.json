@@ -1,0 +1,42 @@
+{
+  "build": {
+    "build_id": "yolov8n-tensorrt-jetson_fp16-20260427T000000Z",
+    "timestamp": "2026-04-27T00:00:00Z",
+    "preset_name": "tensorrt/jetson_fp16",
+    "backend": "tensorrt",
+    "target": "jetson"
+  },
+  "source_model": {
+    "path": "models/yolov8n.onnx",
+    "format": "onnx",
+    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "artifact": {
+    "path": "builds/yolov8n__jetson__tensorrt__jetson_fp16/model.engine",
+    "format": "engine",
+    "role": "deployment_model",
+    "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "model_path": "builds/yolov8n__jetson__tensorrt__jetson_fp16/model.engine",
+    "model_name": "yolov8n.onnx",
+    "precision": "fp16"
+  },
+  "runtime": {
+    "engine": "tensorrt",
+    "device": "jetson",
+    "precision": "fp16",
+    "model_path": "builds/yolov8n__jetson__tensorrt__jetson_fp16/model.engine",
+    "artifact_path": "builds/yolov8n__jetson__tensorrt__jetson_fp16/model.engine",
+    "batch": 1,
+    "height": 640,
+    "width": 640
+  },
+  "preset_snapshot": {
+    "name": "tensorrt/jetson_fp16",
+    "backend": "tensorrt",
+    "target": "jetson",
+    "build_options": {
+      "precision": "fp16",
+      "workspace_mb": 2048
+    }
+  }
+}

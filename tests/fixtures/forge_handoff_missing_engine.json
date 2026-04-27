@@ -1,0 +1,13 @@
+{
+  "artifact": {
+    "model_path": "builds/yolov8n__jetson__tensorrt__jetson_fp16/model.engine",
+    "format": "engine",
+    "precision": "fp16"
+  },
+  "runtime": {
+    "device": "jetson",
+    "batch": 1,
+    "height": 640,
+    "width": 640
+  }
+}
