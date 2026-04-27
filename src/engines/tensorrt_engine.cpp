@@ -520,6 +520,7 @@ BenchmarkResult TensorRTEngine::benchmark(int warmup, int runs) {
     std::sort(sorted_samples.begin(), sorted_samples.end());
     result.p50_ms = percentile_nearest_rank(sorted_samples, 50.0);
     result.p90_ms = percentile_nearest_rank(sorted_samples, 90.0);
+    result.p95_ms = percentile_nearest_rank(sorted_samples, 95.0);
     result.p99_ms = percentile_nearest_rank(sorted_samples, 99.0);
     result.fps = result.mean_ms > 0.0 ? 1000.0 / result.mean_ms : 0.0;
 

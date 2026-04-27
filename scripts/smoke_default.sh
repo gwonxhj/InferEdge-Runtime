@@ -42,6 +42,8 @@ required = [
     "height",
     "width",
     "mean_ms",
+    "p50_ms",
+    "p95_ms",
     "p99_ms",
     "fps_value",
     "success",
@@ -52,5 +54,7 @@ assert not missing, missing
 assert data["status"] == "skipped", data["status"]
 assert data["success"] is False, data["success"]
 PY
+
+INFEREDGE_RUNTIME_RESULT_JSON="${OUTPUT_PATH}" python3 tests/test_lab_result_schema.py
 
 echo "[smoke_default] success"

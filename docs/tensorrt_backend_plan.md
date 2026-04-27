@@ -105,6 +105,7 @@ Expected CMake policy:
   - `std_ms`
   - `p50_ms`
   - `p90_ms`
+  - `p95_ms`
   - `p99_ms`
   - `fps`
 - JSON schema compatibility must remain stable.

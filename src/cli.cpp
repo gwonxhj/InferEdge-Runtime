@@ -282,6 +282,7 @@ int run_cli(const RuntimeConfig& config) {
                 << "    std: " << result.std_ms << '\n'
                 << "    p50: " << result.p50_ms << '\n'
                 << "    p90: " << result.p90_ms << '\n'
+                << "    p95: " << result.p95_ms << '\n'
                 << "    p99: " << result.p99_ms << '\n'
                 << "  fps: " << result.fps << '\n';
         } catch (const std::runtime_error& error) {

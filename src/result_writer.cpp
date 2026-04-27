@@ -260,6 +260,8 @@ std::filesystem::path write_result_json(
         << "  \"warmup\": " << config.warmup << ",\n"
         << "  \"runs\": " << config.runs << ",\n"
         << "  \"mean_ms\": " << benchmark_result.mean_ms << ",\n"
+        << "  \"p50_ms\": " << benchmark_result.p50_ms << ",\n"
+        << "  \"p95_ms\": " << benchmark_result.p95_ms << ",\n"
         << "  \"p99_ms\": " << benchmark_result.p99_ms << ",\n"
         << "  \"fps_value\": " << benchmark_result.fps << ",\n"
         << "  \"success\": " << (benchmark_result.success ? "true" : "false") << ",\n"
@@ -294,6 +296,7 @@ std::filesystem::path write_result_json(
         << "    \"std\": " << benchmark_result.std_ms << ",\n"
         << "    \"p50\": " << benchmark_result.p50_ms << ",\n"
         << "    \"p90\": " << benchmark_result.p90_ms << ",\n"
+        << "    \"p95\": " << benchmark_result.p95_ms << ",\n"
         << "    \"p99\": " << benchmark_result.p99_ms << ",\n"
         << "    \"samples\": ";
     write_double_vector_json(output, benchmark_result.samples_ms);
