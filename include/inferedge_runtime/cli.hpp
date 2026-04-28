@@ -18,6 +18,9 @@ struct RuntimeConfig {
     std::string manifest_build_id;
     std::string model_path;
     std::string input_path;
+    std::string worker_response_output_path;
+    std::string worker_response_status = "completed";
+    std::string worker_error_message = "Runtime worker dry-run failure.";
     std::string engine = "onnxruntime";
     std::string device = "cpu";
     int batch = 1;
@@ -38,6 +41,7 @@ struct RuntimeConfig {
     bool show_version = false;
     bool validate_forge_handoff = false;
     bool validate_lab_worker_request = false;
+    bool export_worker_response = false;
 
     bool has_real_input() const {
         return !input_path.empty();

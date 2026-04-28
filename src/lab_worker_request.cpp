@@ -1,7 +1,11 @@
 #include "inferedge_runtime/lab_worker_request.hpp"
 
 #include <cctype>
+#include <chrono>
+#include <ctime>
+#include <filesystem>
 #include <fstream>
+#include <iomanip>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -167,6 +171,70 @@ int extract_json_int_value(const std::string& section, const std::string& key) {
     }
 }
 
+std::string json_escape(const std::string& value) {
+    std::ostringstream escaped;
+    for (const char ch : value) {
+        switch (ch) {
+            case '"':
+                escaped << "\\\"";
+                break;
+            case '\\':
+                escaped << "\\\\";
+                break;
+            case '\n':
+                escaped << "\\n";
+                break;
+            case '\r':
+                escaped << "\\r";
+                break;
+            case '\t':
+                escaped << "\\t";
+                break;
+            default:
+                escaped << ch;
+                break;
+        }
+    }
+    return escaped.str();
+}
+
+std::string json_string(const std::string& value) {
+    if (value.empty()) {
+        return "null";
+    }
+    return "\"" + json_escape(value) + "\"";
+}
+
+std::string current_utc_timestamp() {
+    const auto now = std::chrono::system_clock::now();
+    const std::time_t now_time = std::chrono::system_clock::to_time_t(now);
+    std::tm utc_time{};
+#if defined(_WIN32)
+    gmtime_s(&utc_time, &now_time);
+#else
+    gmtime_r(&now_time, &utc_time);
+#endif
+
+    std::ostringstream stream;
+    stream << std::put_time(&utc_time, "%Y-%m-%dT%H:%M:%SZ");
+    return stream.str();
+}
+
+void write_text_file(const std::filesystem::path& output_path, const std::string& content) {
+    if (output_path.empty()) {
+        throw std::runtime_error("worker response output path is required");
+    }
+    if (!output_path.parent_path().empty()) {
+        std::filesystem::create_directories(output_path.parent_path());
+    }
+
+    std::ofstream output(output_path);
+    if (!output) {
+        throw std::runtime_error("failed to open worker response output path: " + output_path.string());
+    }
+    output << content;
+}
+
 }  // namespace
 
 LabWorkerRequestConfig load_lab_worker_request_config(const std::string& path) {
@@ -236,6 +304,92 @@ void validate_lab_worker_request_config(const LabWorkerRequestConfig& request, c
     if (request.runs <= 0) {
         throw std::runtime_error("Lab worker request options.runs must be positive: " + path);
     }
+}
+
+std::filesystem::path write_worker_response_dry_run(
+    const LabWorkerRequestConfig& request,
+    const std::string& status,
+    const std::string& output_path,
+    const std::string& error_message) {
+    if (status != "completed" && status != "failed") {
+        throw std::runtime_error("worker response status must be completed or failed");
+    }
+
+    validate_lab_worker_request_config(request, "Lab worker request dry-run export");
+
+    const std::filesystem::path resolved_output_path(output_path);
+    const std::string timestamp = current_utc_timestamp();
+    const std::string runtime_model_path = request.artifact_path.empty() ? request.model_path : request.artifact_path;
+
+    std::ostringstream json;
+    json << std::fixed << std::setprecision(3);
+    if (status == "completed") {
+        json
+            << "{\n"
+            << "  \"job_id\": " << json_string(request.job_id) << ",\n"
+            << "  \"status\": \"completed\",\n"
+            << "  \"forge_metadata\": {\n"
+            << "    \"backend\": " << json_string(request.engine) << ",\n"
+            << "    \"target\": " << json_string(request.device) << ",\n"
+            << "    \"precision\": " << json_string(request.precision) << ",\n"
+            << "    \"artifact_path\": " << json_string(request.artifact_path) << ",\n"
+            << "    \"source_model_path\": " << json_string(request.model_path) << "\n"
+            << "  },\n"
+            << "  \"runtime_result\": {\n"
+            << "    \"model_path\": " << json_string(runtime_model_path) << ",\n"
+            << "    \"engine_backend\": " << json_string(request.engine) << ",\n"
+            << "    \"device_name\": " << json_string(request.device) << ",\n"
+            << "    \"precision\": " << json_string(request.precision) << ",\n"
+            << "    \"batch\": " << request.batch << ",\n"
+            << "    \"height\": " << request.height << ",\n"
+            << "    \"width\": " << request.width << ",\n"
+            << "    \"mean_ms\": 0.000,\n"
+            << "    \"p50_ms\": 0.000,\n"
+            << "    \"p95_ms\": 0.000,\n"
+            << "    \"p99_ms\": 0.000,\n"
+            << "    \"latency_ms\": {\n"
+            << "      \"mean\": 0.000,\n"
+            << "      \"p50\": 0.000,\n"
+            << "      \"p95\": 0.000,\n"
+            << "      \"p99\": 0.000\n"
+            << "    },\n"
+            << "    \"run_config\": {\n"
+            << "      \"batch\": " << request.batch << ",\n"
+            << "      \"height\": " << request.height << ",\n"
+            << "      \"width\": " << request.width << ",\n"
+            << "      \"warmup\": " << request.warmup << ",\n"
+            << "      \"runs\": " << request.runs << ",\n"
+            << "      \"metadata_path\": " << json_string(request.metadata_path) << ",\n"
+            << "      \"manifest_path\": " << json_string(request.manifest_path) << ",\n"
+            << "      \"dry_run\": true\n"
+            << "    },\n"
+            << "    \"timestamp\": " << json_string(timestamp) << ",\n"
+            << "    \"extra\": {\n"
+            << "      \"runtime_artifact_path\": " << json_string(runtime_model_path) << ",\n"
+            << "      \"source_model_path\": " << json_string(request.model_path) << ",\n"
+            << "      \"dry_run\": true,\n"
+            << "      \"worker_response_mode\": \"dry_run\"\n"
+            << "    }\n"
+            << "  },\n"
+            << "  \"completed_at\": " << json_string(timestamp) << "\n"
+            << "}\n";
+    } else {
+        const std::string message = error_message.empty() ? "Runtime worker dry-run failure." : error_message;
+        json
+            << "{\n"
+            << "  \"job_id\": " << json_string(request.job_id) << ",\n"
+            << "  \"status\": \"failed\",\n"
+            << "  \"error\": {\n"
+            << "    \"code\": \"runtime_worker_dry_run_failed\",\n"
+            << "    \"message\": " << json_string(message) << ",\n"
+            << "    \"stage\": \"runtime\"\n"
+            << "  },\n"
+            << "  \"failed_at\": " << json_string(timestamp) << "\n"
+            << "}\n";
+    }
+
+    write_text_file(resolved_output_path, json.str());
+    return resolved_output_path;
 }
 
 }  // namespace inferedge_runtime

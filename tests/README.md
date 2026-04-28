@@ -30,6 +30,12 @@ Lab worker request CLI dry-run validation is covered by:
 bash scripts/smoke_lab_worker_request.sh
 ```
 
+Lab worker completed/failed response dry-run export is covered by:
+
+```bash
+bash scripts/smoke_worker_response_export.sh
+```
+
 ## Manual Smoke Checklist
 
 ## Build Smoke Test

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <filesystem>
 #include <string>
 
 namespace inferedge_runtime {
@@ -24,5 +25,10 @@ struct LabWorkerRequestConfig {
 
 LabWorkerRequestConfig load_lab_worker_request_config(const std::string& path);
 void validate_lab_worker_request_config(const LabWorkerRequestConfig& request, const std::string& path);
+std::filesystem::path write_worker_response_dry_run(
+    const LabWorkerRequestConfig& request,
+    const std::string& status,
+    const std::string& output_path,
+    const std::string& error_message);
 
 }  // namespace inferedge_runtime

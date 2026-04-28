@@ -61,6 +61,27 @@ Runtime can validate the Lab worker request contract without running inference:
 
 Expected output includes `Lab worker request validation` and `status: ok`. Invalid requests fail with a non-zero exit code and a clear error message.
 
+Runtime can also export a Lab worker response payload without running inference:
+
+```bash
+./build/inferedge-runtime \
+  --lab-worker-request tests/fixtures/lab_worker_request.json \
+  --export-worker-response /tmp/runtime_worker_completed.json \
+  --worker-response-status completed
+```
+
+For a failed dry-run response:
+
+```bash
+./build/inferedge-runtime \
+  --lab-worker-request tests/fixtures/lab_worker_request.json \
+  --export-worker-response /tmp/runtime_worker_failed.json \
+  --worker-response-status failed \
+  --worker-error-message "dry-run failure"
+```
+
+This path writes contract-compatible JSON for Lab worker integration tests. It does not execute Forge, Runtime inference, TensorRT, a queue, or a worker daemon.
+
 ## Forge Metadata/Manifest Interaction
 
 When `metadata_path` or `manifest_path` is provided, Runtime should preserve those paths in config and later in result provenance.
@@ -85,7 +106,7 @@ This matches the existing `tests/fixtures/lab_compatible_result.json` schema gua
 
 ## Worker Completed Response Mapping
 
-After execution, Runtime worker output should be wrapped as:
+After execution, or during a dry-run export smoke, Runtime worker output should be wrapped as:
 
 ```json
 {
@@ -100,7 +121,7 @@ After execution, Runtime worker output should be wrapped as:
 
 ## Failure Response Mapping
 
-Failures should use:
+Failures, including dry-run failure exports, should use:
 
 ```json
 {
@@ -132,6 +153,6 @@ This contract does not introduce:
 
 ## Next Steps
 
-- Add a dry-run helper that writes Runtime worker completed/failed response payloads to a file.
+- Add a Lab cross-repo compatibility smoke that ingests Runtime-exported worker responses.
 - Later, add a worker adapter implementation behind this contract.
 - Keep real backend execution behind the existing Runtime execution layer.
