@@ -1,0 +1,27 @@
+{
+  "job_id": "job_runtime_worker_smoke",
+  "input_summary": {
+    "workflow": "analyze",
+    "model_path": "models/yolov8n.onnx",
+    "artifact_path": "builds/yolov8n__jetson__tensorrt__jetson_fp16/model.engine",
+    "metadata_path": "artifacts/metadata.json",
+    "manifest_path": "artifacts/manifest.json",
+    "notes": "runtime worker adapter smoke"
+  },
+  "requested_at": "2026-04-28T06:00:00Z",
+  "model_path": "models/yolov8n.onnx",
+  "artifact_path": "builds/yolov8n__jetson__tensorrt__jetson_fp16/model.engine",
+  "metadata_path": "artifacts/metadata.json",
+  "manifest_path": "artifacts/manifest.json",
+  "options": {
+    "backend": "tensorrt",
+    "target": "jetson",
+    "precision": "fp16",
+    "batch": 1,
+    "height": 640,
+    "width": 640,
+    "warmup": 5,
+    "runs": 50,
+    "with_guard": true
+  }
+}

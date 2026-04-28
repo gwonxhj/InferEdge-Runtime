@@ -1,0 +1,19 @@
+{
+  "job_id": "job_runtime_worker_smoke",
+  "model_path": "builds/yolov8n__jetson__tensorrt__jetson_fp16/model.engine",
+  "source_model_path": "models/yolov8n.onnx",
+  "artifact_path": "builds/yolov8n__jetson__tensorrt__jetson_fp16/model.engine",
+  "metadata_path": "artifacts/metadata.json",
+  "manifest_path": "artifacts/manifest.json",
+  "engine": "tensorrt",
+  "device": "jetson",
+  "precision": "fp16",
+  "batch": 1,
+  "height": 640,
+  "width": 640,
+  "warmup": 5,
+  "runs": 50,
+  "options": {
+    "with_guard": true
+  }
+}

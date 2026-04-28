@@ -22,6 +22,8 @@ The Lab-compatible result contract is also covered by `tests/test_lab_result_sch
 
 Forge handoff parsing is covered by `tests/test_forge_handoff.py` and `scripts/smoke_forge_handoff.sh`. The smoke script validates Forge-style `metadata.json` and `manifest.json` fixtures, checks a missing-field failure case, and confirms the generated Runtime JSON preserves Forge provenance fields.
 
+Lab worker adapter boundary coverage is documented in `docs/lab_worker_adapter_contract.md` and tested by `tests/test_lab_worker_adapter_contract.py`. The test locks the Lab worker request, Runtime invocation config, and Runtime worker completed response fixture shapes without adding a queue, daemon, or backend execution path.
+
 ## Manual Smoke Checklist
 
 ## Build Smoke Test

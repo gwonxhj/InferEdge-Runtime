@@ -1,0 +1,48 @@
+{
+  "job_id": "job_runtime_worker_smoke",
+  "status": "completed",
+  "forge_metadata": {
+    "build_id": "yolov8n-tensorrt-jetson_fp16-20260427T000000Z",
+    "backend": "tensorrt",
+    "target": "jetson",
+    "precision": "fp16",
+    "artifact_path": "builds/yolov8n__jetson__tensorrt__jetson_fp16/model.engine",
+    "artifact_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "source_model_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "runtime_result": {
+    "model_path": "builds/yolov8n__jetson__tensorrt__jetson_fp16/model.engine",
+    "engine_backend": "tensorrt",
+    "device_name": "jetson",
+    "precision": "fp16",
+    "batch": 1,
+    "height": 640,
+    "width": 640,
+    "mean_ms": 7.1,
+    "p50_ms": 7.0,
+    "p95_ms": 7.8,
+    "p99_ms": 8.2,
+    "latency_ms": {
+      "mean": 7.1,
+      "p50": 7.0,
+      "p95": 7.8,
+      "p99": 8.2
+    },
+    "run_config": {
+      "batch": 1,
+      "height": 640,
+      "width": 640,
+      "warmup": 5,
+      "runs": 50,
+      "metadata_path": "artifacts/metadata.json",
+      "manifest_path": "artifacts/manifest.json"
+    },
+    "timestamp": "2026-04-28T06:01:00Z",
+    "extra": {
+      "runtime_artifact_path": "builds/yolov8n__jetson__tensorrt__jetson_fp16/model.engine",
+      "runtime_artifact_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "source_model_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    }
+  },
+  "completed_at": "2026-04-28T06:01:30Z"
+}
