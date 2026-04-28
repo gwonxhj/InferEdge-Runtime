@@ -2,6 +2,10 @@
 
 ![CI](https://github.com/gwonxhj/InferEdge-Runtime/actions/workflows/ci.yml/badge.svg)
 
+**GitHub description:** C++ runtime execution and result export layer for ONNX Runtime/TensorRT edge inference validation.
+
+InferEdge is an end-to-end Edge AI inference validation pipeline that connects build provenance, C++ runtime execution, Lab analysis/deployment decision, and optional deterministic diagnosis evidence.
+
 ## Project Overview
 
 InferEdgeRuntime is a C++ Edge AI runtime for on-device inference and benchmarking.
