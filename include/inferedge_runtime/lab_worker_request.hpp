@@ -13,6 +13,11 @@ struct LabWorkerRequestConfig {
     std::string artifact_path;
     std::string metadata_path;
     std::string manifest_path;
+    std::string source_model_sha256;
+    std::string artifact_sha256;
+    std::string artifact_type;
+    std::string preset_name;
+    std::string build_id;
     std::string engine;
     std::string device;
     std::string precision;

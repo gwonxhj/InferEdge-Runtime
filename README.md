@@ -191,6 +191,7 @@ CLI notes:
 - `--manifest` loads limited defaults from the Forge/build manifest schema.
 - Lab worker adapter planning is documented in [docs/lab_worker_adapter_contract.md](docs/lab_worker_adapter_contract.md).
 - `--lab-worker-request <path> --validate-lab-worker-request` validates Lab worker request JSON and exits without inference.
+- Forge summary-origin worker request compatibility is covered by `tests/fixtures/forge_summary_worker_request.json`.
 - `--lab-worker-request <path> --export-worker-response <path> --worker-response-status completed|failed` writes a Lab worker response contract payload without inference.
 - CLI-provided values always take priority over manifest defaults.
 - `--batch`, `--height`, and `--width` resolve dynamic dummy input dimensions.

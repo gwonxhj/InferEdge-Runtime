@@ -37,6 +37,35 @@ class LabWorkerAdapterContractTest(unittest.TestCase):
         self.assertEqual(config["width"], 640)
         self.assertEqual(config["options"]["with_guard"], True)
 
+    def test_forge_summary_worker_request_maps_to_runtime_config(self):
+        request = load_json(FIXTURES / "forge_summary_worker_request.json")
+        config = project_runtime_invocation_config(request)
+
+        self.assertEqual(config["job_id"], "job_forge_summary_smoke")
+        self.assertEqual(config["model_path"], request["artifact_path"])
+        self.assertEqual(config["source_model_path"], request["model_path"])
+        self.assertEqual(config["metadata_path"], request["metadata_path"])
+        self.assertEqual(config["manifest_path"], request["manifest_path"])
+        self.assertEqual(config["engine"], "tensorrt")
+        self.assertEqual(config["device"], "jetson")
+        self.assertEqual(config["precision"], "fp16")
+        self.assertEqual(config["batch"], 1)
+        self.assertEqual(config["height"], 640)
+        self.assertEqual(config["width"], 640)
+        self.assertEqual(config["warmup"], 5)
+        self.assertEqual(config["runs"], 50)
+
+    def test_forge_summary_worker_request_preserves_nested_provenance(self):
+        request = load_json(FIXTURES / "forge_summary_worker_request.json")
+        config = project_runtime_invocation_config(request)
+        provenance = request["options"]["provenance"]
+
+        self.assertEqual(config["provenance"], provenance)
+        self.assertEqual(provenance["source_model_sha256"], "a" * 64)
+        self.assertEqual(provenance["artifact_sha256"], "b" * 64)
+        self.assertEqual(provenance["artifact_type"], "engine")
+        self.assertEqual(provenance["preset_name"], "tensorrt/jetson_fp16")
+
     def test_completed_response_contains_lab_compatible_runtime_result(self):
         response = load_json(FIXTURES / "runtime_worker_completed_response.json")
 
@@ -92,6 +121,27 @@ class LabWorkerAdapterContractTest(unittest.TestCase):
 
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("model_path or artifact_path", result.stderr)
+
+    def test_cli_validates_forge_summary_worker_request_when_binary_exists(self):
+        skip_without_forge_summary_worker_request_binary(self)
+
+        result = subprocess_run(
+            [
+                str(ROOT / "build" / "inferedge-runtime"),
+                "--lab-worker-request",
+                str(FIXTURES / "forge_summary_worker_request.json"),
+                "--validate-lab-worker-request",
+            ]
+        )
+
+        self.assertIn("Lab worker request validation", result.stdout)
+        self.assertIn("status: ok", result.stdout)
+        self.assertIn("job_id: job_forge_summary_smoke", result.stdout)
+        self.assertIn("source_model_sha256: " + "a" * 64, result.stdout)
+        self.assertIn("artifact_sha256: " + "b" * 64, result.stdout)
+        self.assertIn("artifact_type: engine", result.stdout)
+        self.assertIn("preset_name: tensorrt/jetson_fp16", result.stdout)
+        self.assertIn("build_id: yolov8n-tensorrt-jetson_fp16-20260427T000000Z", result.stdout)
 
     def test_cli_exports_completed_worker_response_when_binary_exists(self):
         skip_without_worker_response_export_binary(self)
@@ -175,12 +225,15 @@ def project_runtime_invocation_config(request: dict) -> dict:
         "batch": require_positive_int(options, "batch"),
         "height": require_positive_int(options, "height"),
         "width": require_positive_int(options, "width"),
-        "warmup": require_positive_int(options, "warmup"),
-        "runs": require_positive_int(options, "runs"),
+        "warmup": positive_int_or_default(options, "warmup", 5),
+        "runs": positive_int_or_default(options, "runs", 50),
         "options": {
             "with_guard": bool(options.get("with_guard", False)),
         },
     }
+    provenance = optional_dict(options, "provenance")
+    if provenance is not None:
+        config["provenance"] = provenance
     validate_runtime_invocation_config(config)
     return config
 
@@ -280,11 +333,26 @@ def require_dict(data: dict, field: str) -> dict:
     return value
 
 
+def optional_dict(data: dict, field: str) -> dict | None:
+    value = data.get(field)
+    if value is None:
+        return None
+    if not isinstance(value, dict):
+        raise AssertionError(f"{field} must be an object when provided")
+    return value
+
+
 def require_positive_int(data: dict, field: str) -> int:
     value = data.get(field)
     if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
         raise AssertionError(f"{field} must be a positive integer")
     return value
+
+
+def positive_int_or_default(data: dict, field: str, default: int) -> int:
+    if field not in data:
+        return default
+    return require_positive_int(data, field)
 
 
 def subprocess_run(args: list[str], *, check: bool = True) -> subprocess.CompletedProcess:
@@ -313,6 +381,22 @@ def skip_without_worker_response_export_binary(test_case: unittest.TestCase) -> 
     result = subprocess_run([str(ROOT / "build" / "inferedge-runtime"), "--help"])
     if "--export-worker-response" not in result.stdout:
         test_case.skipTest("inferedge-runtime binary does not include worker response export options")
+
+
+def skip_without_forge_summary_worker_request_binary(test_case: unittest.TestCase) -> None:
+    skip_without_lab_worker_request_binary(test_case)
+
+    result = subprocess_run(
+        [
+            str(ROOT / "build" / "inferedge-runtime"),
+            "--lab-worker-request",
+            str(FIXTURES / "forge_summary_worker_request.json"),
+            "--validate-lab-worker-request",
+        ],
+        check=False,
+    )
+    if result.returncode != 0 or "source_model_sha256" not in result.stdout:
+        test_case.skipTest("inferedge-runtime binary does not include Forge summary worker request support")
 
 
 if __name__ == "__main__":

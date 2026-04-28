@@ -30,6 +30,8 @@ Lab worker request CLI dry-run validation is covered by:
 bash scripts/smoke_lab_worker_request.sh
 ```
 
+That smoke also validates `tests/fixtures/forge_summary_worker_request.json`, which represents a Forge summary-origin Lab worker request with nested provenance.
+
 Lab worker completed/failed response dry-run export is covered by:
 
 ```bash
