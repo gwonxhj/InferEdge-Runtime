@@ -19,9 +19,36 @@ InferEdgeRuntime v0.1.0 is a validated MVP release.
 
 ## InferEdge Pipeline Position
 
-1. Forge: Build / Convert / Metadata
-2. Runtime: Run / Benchmark / Export Result
-3. Lab: Analyze / Compare / Report
+InferEdgeRuntime is the C++ execution/result export layer of the larger InferEdge validation pipeline:
+
+```text
+ONNX model
+-> InferEdgeForge build
+-> metadata / manifest / worker runtime summary
+-> InferEdgeRuntime validation / result export
+-> InferEdgeLab compare / API / job workflow / deployment_decision
+-> optional InferEdgeAIGuard provenance diagnosis
+-> deploy / review / blocked decision
+```
+
+In that pipeline, Runtime is responsible for the execution boundary: it validates or runs model/artifact inputs, measures latency, exports Lab-compatible result JSON, and can emit dry-run worker response payloads for Lab integration smoke tests.
+
+Implemented today:
+
+- ONNX Runtime C++ MVP path and benchmark/result JSON export
+- Lab-compatible result fields for compare/report/deployment decision flows
+- Forge metadata/manifest handoff validation
+- Lab `worker_request` dry-run validation
+- Lab worker completed/failed response dry-run export
+
+Planned later:
+
+- full worker daemon integration
+- real Lab-triggered Forge/Runtime execution
+- production queue or job runner infrastructure
+- broader TensorRT execution expansion beyond the current linked-build validation path
+
+Runtime does not own comparison policy or final deployment judgement. InferEdgeLab owns `deployment_decision`, while Runtime supplies trustworthy execution and profiling evidence.
 
 ## Current Capabilities
 
