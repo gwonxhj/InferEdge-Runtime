@@ -14,8 +14,8 @@ InferEdgeRuntime v0.1.0 is a validated MVP release.
 
 - ONNX Runtime CPU backend: fully functional
 - Benchmark + JSON export: stable
-- Forge/Lab pipeline: partially integrated (manifest + JSON handoff)
-- TensorRT backend: benchmark execution on Jetson
+- Forge/Lab pipeline: integrated through manifest/result JSON and worker boundary contracts
+- TensorRT backend: benchmark execution on Jetson linked builds
 
 ## InferEdge Pipeline Position
 
@@ -36,8 +36,10 @@ In that pipeline, Runtime is responsible for the execution boundary: it validate
 Implemented today:
 
 - ONNX Runtime C++ MVP path and benchmark/result JSON export
+- Jetson TensorRT linked-build benchmark/result JSON export
 - Lab-compatible result fields for compare/report/deployment decision flows
 - Forge metadata/manifest handoff validation
+- manifest source model identity preservation for compare-ready TensorRT engine results
 - Lab `worker_request` dry-run validation
 - Lab worker completed/failed response dry-run export
 
@@ -46,7 +48,7 @@ Planned later:
 - full worker daemon integration
 - real Lab-triggered Forge/Runtime execution
 - production queue or job runner infrastructure
-- broader TensorRT execution expansion beyond the current linked-build validation path
+- production hardening beyond the current manual/dev linked-build validation path
 
 Runtime does not own comparison policy or final deployment judgement. InferEdgeLab owns `deployment_decision`, while Runtime supplies trustworthy execution and profiling evidence.
 
@@ -75,7 +77,7 @@ Runtime does not own comparison policy or final deployment judgement. InferEdgeL
 
 ## Current Limitations
 
-- ONNX Runtime CPU only
+- default macOS build uses ONNX Runtime/stub paths unless optional backends are explicitly linked
 - float32 input only
 - real image preprocessing requires `INFEREDGE_ENABLE_OPENCV=ON`
 - no TensorRT output post-processing yet
@@ -84,7 +86,7 @@ Runtime does not own comparison policy or final deployment judgement. InferEdgeL
 - OpenCV and CUDA are not linked in the default build
 - manifest parsing is limited to the sample Forge handoff schema
 - no full general-purpose JSON parser yet
-- no full unit test suite yet (CI smoke test only)
+- contract tests and smoke tests cover the current handoff/result schemas; broader backend integration tests remain future work
 - GitHub Actions currently runs default smoke test only
 - ORT linked smoke test remains local/manual because it requires external ONNX Runtime and model files
 
@@ -417,7 +419,8 @@ Recorded-only manifest fields:
 
 Compare-key manifest fields:
 
-- `artifact.model_name`
+- `source_model.path`
+- `artifact.model_name` as a fallback when `source_model.path` is absent
 
 Not applied yet:
 
@@ -479,15 +482,15 @@ Runtime does not perform comparison calculations. It only writes compare-ready m
 - `runtime_role`: fixed to `runtime-result`
 - top-level latency aliases: `mean_ms`, `p50_ms`, `p95_ms`, and `p99_ms`
 
-The model component of `compare_key` prefers manifest `artifact.model_name` when available, then falls back to the CLI `--model` path stem. This lets TensorRT artifacts with generic filenames such as `model.engine` still produce a model-specific key like `yolov8n__b1__h640w640__fp32` when Forge supplies `artifact.model_name`.
+The model component of `compare_key` prefers manifest `source_model.path` when available, then falls back to the CLI `--model` path stem. This lets TensorRT artifacts with generic filenames such as `model.engine` still produce a source-model-specific key like `yolov8n__b1__h640w640__fp32` when Forge supplies source model identity.
 
 InferEdgeLab can compare results that share the same `compare_key` and use `backend_key` to distinguish backend/device variants.
 
 Forge -> Runtime -> Lab flow:
 
-1. Forge builds or exports model artifacts.
-2. Runtime runs ONNX Runtime benchmark and writes JSON result.
-3. Lab reads JSON results and compares/report performance.
+1. Forge builds or exports model artifacts and provenance.
+2. Runtime runs ONNX Runtime or Jetson TensorRT linked-build benchmarks and writes Lab-compatible JSON results.
+3. Lab reads JSON results and owns comparison, reporting, API/job workflow, and deployment decision output.
 
 ## Repository Layout
 

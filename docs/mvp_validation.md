@@ -1,5 +1,8 @@
 # InferEdgeRuntime MVP Validation
 
+> Status note: this document records the early ONNX Runtime MVP validation snapshot.
+> Current Runtime documentation in `README.md` and `tests/README.md` also covers Jetson TensorRT linked-build smoke evidence, Forge manifest handoff, Lab worker request validation, worker response dry-run export, and manifest source-model identity preservation for compare keys.
+
 ## Validation Environment
 
 - Host: macOS (Apple Silicon)
@@ -58,13 +61,13 @@
 - GitHub Actions `build-and-smoke`: success
 - artifact upload: success
 
-## Known Limitations
+## Early MVP Limitations
 
-- ONNX Runtime CPU only
+- default macOS build uses ONNX Runtime/stub paths unless optional backends are explicitly linked
 - float32 input only
-- no TensorRT execution yet
-- no image preprocessing
-- no full unit test suite
+- TensorRT execution requires an explicit Jetson linked build
+- image preprocessing requires an OpenCV-enabled build
+- broader backend integration tests remain future work
 
 ## Conclusion
 
