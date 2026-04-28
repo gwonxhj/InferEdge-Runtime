@@ -1,0 +1,21 @@
+{
+  "job_id": "job_runtime_worker_missing_input",
+  "input_summary": {
+    "workflow": "analyze",
+    "model_path": null,
+    "artifact_path": null
+  },
+  "requested_at": "2026-04-28T06:00:00Z",
+  "metadata_path": "artifacts/metadata.json",
+  "manifest_path": "artifacts/manifest.json",
+  "options": {
+    "backend": "tensorrt",
+    "target": "jetson",
+    "precision": "fp16",
+    "batch": 1,
+    "height": 640,
+    "width": 640,
+    "warmup": 5,
+    "runs": 50
+  }
+}

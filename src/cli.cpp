@@ -1,6 +1,7 @@
 #include "inferedge_runtime/cli.hpp"
 
 #include "inferedge_runtime/engine.hpp"
+#include "inferedge_runtime/lab_worker_request.hpp"
 #include "inferedge_runtime/manifest.hpp"
 #include "inferedge_runtime/result_writer.hpp"
 #include "inferedge_runtime/version.hpp"
@@ -109,6 +110,8 @@ void print_help() {
         << "  --forge-manifest <path> Alias for --manifest using Forge manifest.json handoff\n"
         << "  --forge-metadata <path> Optional Forge metadata.json handoff path used for default runtime config\n"
         << "  --validate-forge-handoff Validate Forge handoff input and exit without execution\n"
+        << "  --lab-worker-request <path> Optional Lab worker_request JSON for dry-run validation\n"
+        << "  --validate-lab-worker-request Validate Lab worker_request input and exit without execution\n"
         << "  --model <path>         Path to an input model file\n"
         << "  --input <image_path>   Optional real image input path (requires OpenCV-enabled build)\n"
         << "  --engine <name>        Runtime engine name (supported: onnxruntime, ort, tensorrt, trt; default: onnxruntime)\n"
@@ -144,6 +147,10 @@ RuntimeConfig parse_args(int argc, char** argv) {
             config.forge_metadata_path = require_value(argc, argv, i, option);
         } else if (option == "--validate-forge-handoff") {
             config.validate_forge_handoff = true;
+        } else if (option == "--lab-worker-request") {
+            config.lab_worker_request_path = require_value(argc, argv, i, option);
+        } else if (option == "--validate-lab-worker-request") {
+            config.validate_lab_worker_request = true;
         } else if (option == "--model") {
             config.model_path = require_value(argc, argv, i, option);
             config.model_path_overridden = true;
@@ -187,6 +194,10 @@ RuntimeConfig parse_args(int argc, char** argv) {
         throw std::invalid_argument(
             "use only one Forge handoff option: --manifest, --forge-manifest, or --forge-metadata");
     }
+    if (config.validate_forge_handoff && config.validate_lab_worker_request) {
+        throw std::invalid_argument(
+            "use only one validation mode: --validate-forge-handoff or --validate-lab-worker-request");
+    }
 
     ManifestConfig manifest;
     if (!config.forge_metadata_path.empty()) {
@@ -211,6 +222,35 @@ RuntimeConfig parse_args(int argc, char** argv) {
 }
 
 int run_cli(const RuntimeConfig& config) {
+    if (config.validate_lab_worker_request) {
+        if (config.lab_worker_request_path.empty()) {
+            std::cerr << "Lab worker request path is required for --validate-lab-worker-request\n";
+            return 1;
+        }
+
+        const LabWorkerRequestConfig request = load_lab_worker_request_config(config.lab_worker_request_path);
+        std::cout
+            << "Lab worker request validation\n"
+            << "  path: " << config.lab_worker_request_path << '\n'
+            << "  job_id: " << request.job_id << '\n'
+            << "  workflow: " << request.workflow << '\n'
+            << "  model: " << (request.artifact_path.empty() ? request.model_path : request.artifact_path) << '\n'
+            << "  source_model: " << (request.model_path.empty() ? "none" : request.model_path) << '\n'
+            << "  artifact: " << (request.artifact_path.empty() ? "none" : request.artifact_path) << '\n'
+            << "  metadata: " << (request.metadata_path.empty() ? "none" : request.metadata_path) << '\n'
+            << "  manifest: " << (request.manifest_path.empty() ? "none" : request.manifest_path) << '\n'
+            << "  engine: " << request.engine << '\n'
+            << "  device: " << request.device << '\n'
+            << "  precision: " << request.precision << '\n'
+            << "  batch: " << request.batch << '\n'
+            << "  height: " << request.height << '\n'
+            << "  width: " << request.width << '\n'
+            << "  warmup: " << request.warmup << '\n'
+            << "  runs: " << request.runs << '\n'
+            << "  status: ok\n";
+        return 0;
+    }
+
     if (config.validate_forge_handoff) {
         if (config.manifest_path.empty()) {
             std::cerr << "Forge handoff path is required for --validate-forge-handoff\n";

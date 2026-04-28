@@ -189,6 +189,7 @@ CLI notes:
 
 - `--manifest` loads limited defaults from the Forge/build manifest schema.
 - Lab worker adapter planning is documented in [docs/lab_worker_adapter_contract.md](docs/lab_worker_adapter_contract.md).
+- `--lab-worker-request <path> --validate-lab-worker-request` validates Lab worker request JSON and exits without inference.
 - CLI-provided values always take priority over manifest defaults.
 - `--batch`, `--height`, and `--width` resolve dynamic dummy input dimensions.
 - `--input` uses a real image input instead of dummy zeros when OpenCV support is enabled.

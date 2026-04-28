@@ -8,6 +8,7 @@ struct RuntimeConfig {
     std::string manifest_path;
     std::string forge_metadata_path;
     std::string forge_manifest_path;
+    std::string lab_worker_request_path;
     std::string manifest_model_name;
     std::string manifest_precision;
     std::string manifest_format;
@@ -36,6 +37,7 @@ struct RuntimeConfig {
     bool show_help = false;
     bool show_version = false;
     bool validate_forge_handoff = false;
+    bool validate_lab_worker_request = false;
 
     bool has_real_input() const {
         return !input_path.empty();

@@ -49,6 +49,18 @@ Minimum config fields:
 
 This config is a contract boundary. It is not a new CLI path in this step.
 
+## CLI Dry-Run Validation
+
+Runtime can validate the Lab worker request contract without running inference:
+
+```bash
+./build/inferedge-runtime \
+  --lab-worker-request tests/fixtures/lab_worker_request.json \
+  --validate-lab-worker-request
+```
+
+Expected output includes `Lab worker request validation` and `status: ok`. Invalid requests fail with a non-zero exit code and a clear error message.
+
 ## Forge Metadata/Manifest Interaction
 
 When `metadata_path` or `manifest_path` is provided, Runtime should preserve those paths in config and later in result provenance.
@@ -113,13 +125,13 @@ This contract does not introduce:
 - queue, database, Redis, or Celery
 - file upload handling
 - TensorRT execution expansion
-- changes to existing Runtime CLI behavior
+- changes to existing benchmark CLI behavior
 - changes to existing Forge handoff parsing behavior
 - real Forge build execution
 - real Runtime inference execution
 
 ## Next Steps
 
-- Add a Runtime CLI dry-run option that accepts a Lab worker request and validates the projected invocation config.
+- Add a dry-run helper that writes Runtime worker completed/failed response payloads to a file.
 - Later, add a worker adapter implementation behind this contract.
 - Keep real backend execution behind the existing Runtime execution layer.

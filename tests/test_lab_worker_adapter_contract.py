@@ -1,4 +1,5 @@
 import json
+import subprocess
 import unittest
 from pathlib import Path
 
@@ -57,6 +58,39 @@ class LabWorkerAdapterContractTest(unittest.TestCase):
             "stage": "runtime",
         }
         validate_worker_failed_response(response)
+
+    def test_cli_validates_lab_worker_request_when_binary_exists(self):
+        skip_without_lab_worker_request_binary(self)
+
+        result = subprocess_run(
+            [
+                str(ROOT / "build" / "inferedge-runtime"),
+                "--lab-worker-request",
+                str(FIXTURES / "lab_worker_request.json"),
+                "--validate-lab-worker-request",
+            ]
+        )
+
+        self.assertIn("Lab worker request validation", result.stdout)
+        self.assertIn("status: ok", result.stdout)
+        self.assertIn("job_id: job_runtime_worker_smoke", result.stdout)
+        self.assertIn("engine: tensorrt", result.stdout)
+
+    def test_cli_rejects_missing_model_or_artifact_when_binary_exists(self):
+        skip_without_lab_worker_request_binary(self)
+
+        result = subprocess_run(
+            [
+                str(ROOT / "build" / "inferedge-runtime"),
+                "--lab-worker-request",
+                str(FIXTURES / "lab_worker_request_missing_input.json"),
+                "--validate-lab-worker-request",
+            ],
+            check=False,
+        )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("model_path or artifact_path", result.stderr)
 
 
 def project_runtime_invocation_config(request: dict) -> dict:
@@ -193,6 +227,26 @@ def require_positive_int(data: dict, field: str) -> int:
     if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
         raise AssertionError(f"{field} must be a positive integer")
     return value
+
+
+def subprocess_run(args: list[str], *, check: bool = True) -> subprocess.CompletedProcess:
+    return subprocess.run(
+        args,
+        cwd=ROOT,
+        check=check,
+        capture_output=True,
+        text=True,
+    )
+
+
+def skip_without_lab_worker_request_binary(test_case: unittest.TestCase) -> None:
+    binary = ROOT / "build" / "inferedge-runtime"
+    if not binary.exists():
+        test_case.skipTest("inferedge-runtime binary was not built")
+
+    result = subprocess_run([str(binary), "--help"])
+    if "--lab-worker-request" not in result.stdout:
+        test_case.skipTest("inferedge-runtime binary does not include Lab worker request options")
 
 
 if __name__ == "__main__":
