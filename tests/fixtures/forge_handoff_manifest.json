@@ -17,7 +17,7 @@
     "role": "deployment_model",
     "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
     "model_path": "builds/yolov8n__jetson__tensorrt__jetson_fp16/model.engine",
-    "model_name": "yolov8n.onnx",
+    "model_name": "model.engine",
     "precision": "fp16"
   },
   "runtime": {

@@ -98,7 +98,7 @@
     "compare_ready": true,
     "compare_key": "yolov8n__b1__h640w640__fp32",
     "backend_key": "onnxruntime__cpu",
-    "compare_model_source": "manifest_model_name",
+    "compare_model_source": "manifest_source_model",
     "compare_model_name": "yolov8n"
   }
 }

@@ -10,6 +10,7 @@ struct RuntimeConfig {
     std::string forge_manifest_path;
     std::string lab_worker_request_path;
     std::string manifest_model_name;
+    std::string manifest_source_model_path;
     std::string manifest_precision;
     std::string manifest_format;
     std::string manifest_artifact_sha256;

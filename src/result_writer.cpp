@@ -116,7 +116,7 @@ std::string compare_model_name(const RuntimeConfig& config) {
 }
 
 std::string compare_model_source(const RuntimeConfig& config) {
-    return config.manifest_model_name.empty() ? "model_path" : "manifest_model_name";
+    return config.manifest_model_name.empty() ? "model_path" : "manifest_source_model";
 }
 
 std::string make_compare_key(const RuntimeConfig& config) {
@@ -337,6 +337,7 @@ std::filesystem::path write_result_json(
         << "    \"manifest_format\": " << json_string(config.manifest_format) << ",\n"
         << "    \"manifest_preset_name\": " << json_string(config.manifest_preset_name) << ",\n"
         << "    \"manifest_build_id\": " << json_string(config.manifest_build_id) << ",\n"
+        << "    \"source_model_path\": " << json_string(config.manifest_source_model_path) << ",\n"
         << "    \"source_model_sha256\": " << json_string(config.manifest_source_sha256) << ",\n"
         << "    \"runtime_artifact_sha256\": " << json_string(config.manifest_artifact_sha256) << ",\n"
         << "    \"runtime_artifact_path\": " << json_string(config.model_path) << ",\n"
