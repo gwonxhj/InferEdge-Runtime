@@ -177,14 +177,17 @@ ManifestConfig load_manifest_config(const std::string& path) {
     if (manifest.model_path.empty()) {
         manifest.model_path = extract_json_string_value(artifact, "path");
     }
-    manifest.model_name = extract_json_string_value(artifact, "model_name");
+    manifest.source_model_path = extract_json_string_value(source_model, "path");
+    manifest.model_name = manifest.source_model_path;
+    if (manifest.model_name.empty()) {
+        manifest.model_name = extract_json_string_value(artifact, "model_name");
+    }
     manifest.precision = extract_json_string_value(artifact, "precision");
     if (manifest.precision.empty()) {
         manifest.precision = extract_json_string_value(runtime, "precision");
     }
     manifest.format = extract_json_string_value(artifact, "format");
     manifest.artifact_sha256 = extract_json_string_value(artifact, "sha256");
-    manifest.source_model_path = extract_json_string_value(source_model, "path");
     manifest.source_model_sha256 = extract_json_string_value(source_model, "sha256");
     manifest.preset_name = extract_json_string_value(build, "preset_name");
     manifest.build_id = extract_json_string_value(build, "build_id");
@@ -219,11 +222,14 @@ ManifestConfig load_forge_metadata_config(const std::string& path) {
     if (manifest.model_path.empty()) {
         manifest.model_path = extract_json_string_value(artifact, "path");
     }
-    manifest.model_name = extract_json_string_value(source_model, "path");
+    manifest.source_model_path = extract_json_string_value(source_model, "path");
+    manifest.model_name = manifest.source_model_path;
+    if (manifest.model_name.empty()) {
+        manifest.model_name = extract_json_string_value(artifact, "model_name");
+    }
     manifest.precision = extract_json_string_value(runtime, "precision");
     manifest.format = extract_json_string_value(artifact, "format");
     manifest.artifact_sha256 = extract_json_string_value(artifact, "sha256");
-    manifest.source_model_path = extract_json_string_value(source_model, "path");
     manifest.source_model_sha256 = extract_json_string_value(source_model, "sha256");
     manifest.preset_name = extract_json_string_value(build, "preset_name");
     manifest.build_id = extract_json_string_value(build, "build_id");
@@ -259,6 +265,7 @@ void validate_forge_handoff_config(const ManifestConfig& manifest, const std::st
 
 void apply_manifest_defaults(RuntimeConfig& config, const ManifestConfig& manifest) {
     config.manifest_model_name = manifest.model_name;
+    config.manifest_source_model_path = manifest.source_model_path;
     config.manifest_precision = manifest.precision;
     config.manifest_format = manifest.format;
     config.manifest_artifact_sha256 = manifest.artifact_sha256;

@@ -347,7 +347,7 @@ The `extra` object includes:
 - `compare_ready`: currently `true`
 - `compare_key`
 - `backend_key`
-- `compare_model_source`: `manifest_model_name` or `model_path`
+- `compare_model_source`: `manifest_source_model` or `model_path`
 - `compare_model_name`: normalized model component used by `compare_key`
 
 Top-level compatibility fields:

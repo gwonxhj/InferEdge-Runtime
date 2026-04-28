@@ -181,7 +181,7 @@ assert "backend_key" in data
 assert data["extra"]["compare_ready"] is True
 assert data["extra"]["compare_key"] == data["compare_key"]
 assert data["extra"]["backend_key"] == data["backend_key"]
-assert data["extra"]["compare_model_source"] in {"manifest_model_name", "model_path"}
+assert data["extra"]["compare_model_source"] in {"manifest_source_model", "model_path"}
 assert data["extra"]["compare_model_name"]
 print("manifest sample smoke ok")
 PY
@@ -209,8 +209,8 @@ Manifest-based compare key:
 
 Expected:
 
-- `compare_key` uses `artifact.model_name`, for example `yolov8n__b1__h640w640__fp32`
-- `extra.compare_model_source` is `manifest_model_name`
+- `compare_key` uses `source_model.path`, for example `yolov8n__b1__h640w640__fp32`
+- `extra.compare_model_source` is `manifest_source_model`
 - `extra.compare_model_name` is the normalized model stem
 
 CLI override priority:
