@@ -38,6 +38,7 @@ InferEdgeRuntime v0.1.0 is a validated MVP release.
 - Lab-compatible top-level fields
 - automatic result naming and `results/latest.json` handoff
 - limited manifest default apply for Forge handoff preparation
+- Lab worker adapter contract fixture/test coverage
 - TensorRT backend stub for future Jetson integration
 - TensorRT engine deserialization and metadata extraction on Jetson linked builds
 - TensorRT one-shot dummy inference on Jetson linked builds
@@ -187,6 +188,7 @@ xattr -dr com.apple.quarantine ~/onnxruntime/onnxruntime-osx-arm64-1.25.0
 CLI notes:
 
 - `--manifest` loads limited defaults from the Forge/build manifest schema.
+- Lab worker adapter planning is documented in [docs/lab_worker_adapter_contract.md](docs/lab_worker_adapter_contract.md).
 - CLI-provided values always take priority over manifest defaults.
 - `--batch`, `--height`, and `--width` resolve dynamic dummy input dimensions.
 - `--input` uses a real image input instead of dummy zeros when OpenCV support is enabled.
