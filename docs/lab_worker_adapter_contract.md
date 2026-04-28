@@ -61,6 +61,26 @@ Runtime can validate the Lab worker request contract without running inference:
 
 Expected output includes `Lab worker request validation` and `status: ok`. Invalid requests fail with a non-zero exit code and a clear error message.
 
+## Forge Summary-Origin Worker Requests
+
+InferEdgeLab can normalize an InferEdgeForge `worker_runtime_summary` into a Lab `worker_request`. Runtime accepts that shape through the same dry-run validation path:
+
+```bash
+./build/inferedge-runtime \
+  --lab-worker-request tests/fixtures/forge_summary_worker_request.json \
+  --validate-lab-worker-request
+```
+
+This fixture includes nested `options.provenance` fields from Forge summary normalization:
+
+- `source_model_sha256`
+- `artifact_sha256`
+- `artifact_type`
+- `preset_name`
+- `build_id`
+
+Runtime preserves these fields during parsing for future worker response provenance. If `warmup` or `runs` are omitted by the Forge summary-origin request, Runtime uses its dry-run defaults while still requiring model/artifact path, backend, target, precision, and shape.
+
 Runtime can also export a Lab worker response payload without running inference:
 
 ```bash

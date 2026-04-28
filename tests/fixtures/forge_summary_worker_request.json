@@ -1,0 +1,52 @@
+{
+  "job_id": "job_forge_summary_smoke",
+  "requested_at": "2026-04-28T07:00:00Z",
+  "input_summary": {
+    "workflow": "analyze",
+    "model_path": "models/yolov8n.onnx",
+    "artifact_path": "builds/yolov8n__jetson__tensorrt__jetson_fp16/model.engine",
+    "metadata_path": "builds/yolov8n__jetson__tensorrt__jetson_fp16/metadata.json",
+    "manifest_path": "builds/yolov8n__jetson__tensorrt__jetson_fp16/manifest.json",
+    "provenance": {
+      "source_model_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "artifact_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "artifact_type": "engine",
+      "preset_name": "tensorrt/jetson_fp16",
+      "build_id": "yolov8n-tensorrt-jetson_fp16-20260427T000000Z"
+    },
+    "options": {
+      "backend": "tensorrt",
+      "target": "jetson",
+      "precision": "fp16",
+      "batch": 1,
+      "height": 640,
+      "width": 640,
+      "provenance": {
+        "source_model_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "artifact_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "artifact_type": "engine",
+        "preset_name": "tensorrt/jetson_fp16",
+        "build_id": "yolov8n-tensorrt-jetson_fp16-20260427T000000Z"
+      }
+    }
+  },
+  "model_path": "models/yolov8n.onnx",
+  "artifact_path": "builds/yolov8n__jetson__tensorrt__jetson_fp16/model.engine",
+  "metadata_path": "builds/yolov8n__jetson__tensorrt__jetson_fp16/metadata.json",
+  "manifest_path": "builds/yolov8n__jetson__tensorrt__jetson_fp16/manifest.json",
+  "options": {
+    "backend": "tensorrt",
+    "target": "jetson",
+    "precision": "fp16",
+    "batch": 1,
+    "height": 640,
+    "width": 640,
+    "provenance": {
+      "source_model_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "artifact_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "artifact_type": "engine",
+      "preset_name": "tensorrt/jetson_fp16",
+      "build_id": "yolov8n-tensorrt-jetson_fp16-20260427T000000Z"
+    }
+  }
+}

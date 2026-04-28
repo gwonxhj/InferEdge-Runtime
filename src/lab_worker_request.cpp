@@ -246,6 +246,7 @@ LabWorkerRequestConfig load_lab_worker_request_config(const std::string& path) {
     const std::string json = read_text_file(path);
     const std::string input_summary = find_object_section(json, "input_summary");
     const std::string options = find_object_section(json, "options");
+    const std::string provenance = find_object_section(options, "provenance");
 
     request.job_id = extract_json_string_value(json, "job_id");
     request.requested_at = extract_json_string_value(json, "requested_at");
@@ -254,6 +255,11 @@ LabWorkerRequestConfig load_lab_worker_request_config(const std::string& path) {
     request.artifact_path = extract_json_string_value(json, "artifact_path");
     request.metadata_path = extract_json_string_value(json, "metadata_path");
     request.manifest_path = extract_json_string_value(json, "manifest_path");
+    request.source_model_sha256 = extract_json_string_value(provenance, "source_model_sha256");
+    request.artifact_sha256 = extract_json_string_value(provenance, "artifact_sha256");
+    request.artifact_type = extract_json_string_value(provenance, "artifact_type");
+    request.preset_name = extract_json_string_value(provenance, "preset_name");
+    request.build_id = extract_json_string_value(provenance, "build_id");
     request.engine = extract_json_string_value(options, "backend");
     request.device = extract_json_string_value(options, "target");
     request.precision = extract_json_string_value(options, "precision");
@@ -262,6 +268,12 @@ LabWorkerRequestConfig load_lab_worker_request_config(const std::string& path) {
     request.width = extract_json_int_value(options, "width");
     request.warmup = extract_json_int_value(options, "warmup");
     request.runs = extract_json_int_value(options, "runs");
+    if (request.warmup <= 0) {
+        request.warmup = 5;
+    }
+    if (request.runs <= 0) {
+        request.runs = 50;
+    }
 
     validate_lab_worker_request_config(request, path);
     return request;
@@ -367,6 +379,11 @@ std::filesystem::path write_worker_response_dry_run(
             << "    \"extra\": {\n"
             << "      \"runtime_artifact_path\": " << json_string(runtime_model_path) << ",\n"
             << "      \"source_model_path\": " << json_string(request.model_path) << ",\n"
+            << "      \"runtime_artifact_sha256\": " << json_string(request.artifact_sha256) << ",\n"
+            << "      \"source_model_sha256\": " << json_string(request.source_model_sha256) << ",\n"
+            << "      \"artifact_type\": " << json_string(request.artifact_type) << ",\n"
+            << "      \"preset_name\": " << json_string(request.preset_name) << ",\n"
+            << "      \"build_id\": " << json_string(request.build_id) << ",\n"
             << "      \"dry_run\": true,\n"
             << "      \"worker_response_mode\": \"dry_run\"\n"
             << "    }\n"
