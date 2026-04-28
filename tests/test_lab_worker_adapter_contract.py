@@ -1,5 +1,6 @@
 import json
 import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -91,6 +92,63 @@ class LabWorkerAdapterContractTest(unittest.TestCase):
 
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("model_path or artifact_path", result.stderr)
+
+    def test_cli_exports_completed_worker_response_when_binary_exists(self):
+        skip_without_worker_response_export_binary(self)
+
+        temp_dir = tempfile.TemporaryDirectory()
+        self.addCleanup(temp_dir.cleanup)
+        output_path = Path(temp_dir.name) / "worker_completed_response_test.json"
+
+        result = subprocess_run(
+            [
+                str(ROOT / "build" / "inferedge-runtime"),
+                "--lab-worker-request",
+                str(FIXTURES / "lab_worker_request.json"),
+                "--export-worker-response",
+                str(output_path),
+                "--worker-response-status",
+                "completed",
+            ]
+        )
+
+        self.assertIn("Worker response dry-run export", result.stdout)
+        self.assertIn("status: completed", result.stdout)
+        response = load_json(output_path)
+        validate_worker_completed_response(response)
+        validate_lab_compatible_runtime_result(response["runtime_result"])
+        self.assertEqual(response["job_id"], "job_runtime_worker_smoke")
+        self.assertEqual(response["runtime_result"]["run_config"]["dry_run"], True)
+        self.assertEqual(response["runtime_result"]["extra"]["worker_response_mode"], "dry_run")
+
+    def test_cli_exports_failed_worker_response_when_binary_exists(self):
+        skip_without_worker_response_export_binary(self)
+
+        temp_dir = tempfile.TemporaryDirectory()
+        self.addCleanup(temp_dir.cleanup)
+        output_path = Path(temp_dir.name) / "worker_failed_response_test.json"
+
+        result = subprocess_run(
+            [
+                str(ROOT / "build" / "inferedge-runtime"),
+                "--lab-worker-request",
+                str(FIXTURES / "lab_worker_request.json"),
+                "--export-worker-response",
+                str(output_path),
+                "--worker-response-status",
+                "failed",
+                "--worker-error-message",
+                "dry-run failure",
+            ]
+        )
+
+        self.assertIn("Worker response dry-run export", result.stdout)
+        self.assertIn("status: failed", result.stdout)
+        response = load_json(output_path)
+        validate_worker_failed_response(response)
+        self.assertEqual(response["job_id"], "job_runtime_worker_smoke")
+        self.assertEqual(response["error"]["message"], "dry-run failure")
+        self.assertNotIn("runtime_result", response)
 
 
 def project_runtime_invocation_config(request: dict) -> dict:
@@ -247,6 +305,14 @@ def skip_without_lab_worker_request_binary(test_case: unittest.TestCase) -> None
     result = subprocess_run([str(binary), "--help"])
     if "--lab-worker-request" not in result.stdout:
         test_case.skipTest("inferedge-runtime binary does not include Lab worker request options")
+
+
+def skip_without_worker_response_export_binary(test_case: unittest.TestCase) -> None:
+    skip_without_lab_worker_request_binary(test_case)
+
+    result = subprocess_run([str(ROOT / "build" / "inferedge-runtime"), "--help"])
+    if "--export-worker-response" not in result.stdout:
+        test_case.skipTest("inferedge-runtime binary does not include worker response export options")
 
 
 if __name__ == "__main__":

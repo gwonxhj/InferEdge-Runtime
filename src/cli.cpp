@@ -38,6 +38,10 @@ bool is_supported_device(const std::string& device) {
     return device == "cpu" || device == "jetson" || device == "cuda";
 }
 
+bool is_supported_worker_response_status(const std::string& status) {
+    return status == "completed" || status == "failed";
+}
+
 void validate_engine(const std::string& engine) {
     if (!is_supported_engine(engine)) {
         throw std::invalid_argument(
@@ -112,6 +116,9 @@ void print_help() {
         << "  --validate-forge-handoff Validate Forge handoff input and exit without execution\n"
         << "  --lab-worker-request <path> Optional Lab worker_request JSON for dry-run validation\n"
         << "  --validate-lab-worker-request Validate Lab worker_request input and exit without execution\n"
+        << "  --export-worker-response <path> Write a dry-run Lab worker_response JSON and exit\n"
+        << "  --worker-response-status <completed|failed> Dry-run worker response status (default: completed)\n"
+        << "  --worker-error-message <message> Optional failed dry-run worker response message\n"
         << "  --model <path>         Path to an input model file\n"
         << "  --input <image_path>   Optional real image input path (requires OpenCV-enabled build)\n"
         << "  --engine <name>        Runtime engine name (supported: onnxruntime, ort, tensorrt, trt; default: onnxruntime)\n"
@@ -151,6 +158,18 @@ RuntimeConfig parse_args(int argc, char** argv) {
             config.lab_worker_request_path = require_value(argc, argv, i, option);
         } else if (option == "--validate-lab-worker-request") {
             config.validate_lab_worker_request = true;
+        } else if (option == "--export-worker-response") {
+            config.worker_response_output_path = require_value(argc, argv, i, option);
+            config.export_worker_response = true;
+        } else if (option == "--worker-response-status") {
+            config.worker_response_status = require_value(argc, argv, i, option);
+            if (!is_supported_worker_response_status(config.worker_response_status)) {
+                throw std::invalid_argument(
+                    "unsupported worker response status: " + config.worker_response_status +
+                    " (supported: completed, failed)");
+            }
+        } else if (option == "--worker-error-message") {
+            config.worker_error_message = require_value(argc, argv, i, option);
         } else if (option == "--model") {
             config.model_path = require_value(argc, argv, i, option);
             config.model_path_overridden = true;
@@ -198,6 +217,22 @@ RuntimeConfig parse_args(int argc, char** argv) {
         throw std::invalid_argument(
             "use only one validation mode: --validate-forge-handoff or --validate-lab-worker-request");
     }
+    if (config.validate_forge_handoff && config.export_worker_response) {
+        throw std::invalid_argument(
+            "use only one dry-run mode: --validate-forge-handoff or --export-worker-response");
+    }
+    if (config.validate_lab_worker_request && config.export_worker_response) {
+        throw std::invalid_argument(
+            "use only one Lab worker request mode: --validate-lab-worker-request or --export-worker-response");
+    }
+    if (config.export_worker_response && config.lab_worker_request_path.empty()) {
+        throw std::invalid_argument("--lab-worker-request is required with --export-worker-response");
+    }
+    if (!is_supported_worker_response_status(config.worker_response_status)) {
+        throw std::invalid_argument(
+            "unsupported worker response status: " + config.worker_response_status +
+            " (supported: completed, failed)");
+    }
 
     ManifestConfig manifest;
     if (!config.forge_metadata_path.empty()) {
@@ -222,6 +257,29 @@ RuntimeConfig parse_args(int argc, char** argv) {
 }
 
 int run_cli(const RuntimeConfig& config) {
+    if (config.export_worker_response) {
+        if (config.lab_worker_request_path.empty()) {
+            std::cerr << "Lab worker request path is required for --export-worker-response\n";
+            return 1;
+        }
+
+        const LabWorkerRequestConfig request = load_lab_worker_request_config(config.lab_worker_request_path);
+        const std::filesystem::path output_path = write_worker_response_dry_run(
+            request,
+            config.worker_response_status,
+            config.worker_response_output_path,
+            config.worker_error_message);
+
+        std::cout
+            << "Worker response dry-run export\n"
+            << "  request: " << config.lab_worker_request_path << '\n'
+            << "  output: " << output_path.string() << '\n'
+            << "  job_id: " << request.job_id << '\n'
+            << "  status: " << config.worker_response_status << '\n'
+            << "  inference: skipped\n";
+        return 0;
+    }
+
     if (config.validate_lab_worker_request) {
         if (config.lab_worker_request_path.empty()) {
             std::cerr << "Lab worker request path is required for --validate-lab-worker-request\n";
