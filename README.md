@@ -1,5 +1,7 @@
 # InferEdge-Runtime
 
+Language: English | [한국어](README.ko.md)
+
 ![CI](https://github.com/gwonxhj/InferEdge-Runtime/actions/workflows/ci.yml/badge.svg)
 
 **GitHub description:** C++ runtime execution and result export layer for ONNX Runtime/TensorRT edge inference validation.
