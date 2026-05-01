@@ -14,11 +14,13 @@ On Mac development environments, InferEdgeRuntime should continue to avoid Tenso
 - Mac/default TensorRT stub metadata reports `available=false`.
 - Jetson linked TensorRT metadata reports `available=true`.
 - TensorRT benchmark execution produces real latency/FPS JSON results on Jetson linked builds.
+- Jetson TensorRT Runtime JSON can be imported and compared in InferEdgeLab and replayed through Local Studio demo evidence.
 
 Progress note:
 
 - TensorRT linked builds can now deserialize `.engine` files, extract metadata, allocate float32 dummy buffers, and run one-shot inference.
 - TensorRT linked builds can now produce real benchmark JSON from Forge-generated `.engine` files on Jetson.
+- InferEdgeLab now has direct import/compare and Local Studio demo evidence for TensorRT vs ONNX Runtime result inspection.
 
 ## Target Runtime Flow
 
@@ -137,11 +139,11 @@ TensorRT implementation errors should be explicit and actionable. Example messag
 - [ ] Run warmup/runs benchmark
 - [ ] Validate JSON with `python3 -m json.tool`
 - [ ] Confirm `results/latest.json`
-- [ ] Compare Runtime JSON in InferEdgeLab
+- [x] Compare Runtime JSON in InferEdgeLab
 
 ## Non-goals
 
-- No TensorRT benchmark implementation in this one-shot inference step
+- TensorRT benchmark implementation is now available in the linked Jetson build; this plan keeps the earlier one-shot context for design history.
 - No OpenCV preprocessing
 - No real image/video pipeline
 - No RKNN/Hailo backend yet
@@ -160,7 +162,7 @@ TensorRT implementation errors should be explicit and actionable. Example messag
 - [x] Run one-shot inference
 - [x] Reuse benchmark runner
 - [x] Export TensorRT benchmark JSON
-- [ ] Validate on Jetson Orin Nano
-- [ ] Compare TensorRT result in InferEdgeLab
+- [x] Validate on Jetson Orin Nano
+- [x] Compare TensorRT result in InferEdgeLab
 - [ ] Output post-processing
 - [ ] Lab comparison workflow
