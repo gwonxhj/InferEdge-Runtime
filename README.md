@@ -562,8 +562,8 @@ Forge -> Runtime -> Lab flow:
 - [x] TensorRT benchmark runner on Jetson
 - [x] Optional real image input inference mode
 - [ ] TensorRT output post-processing
-- [ ] TensorRT/ONNX Runtime comparison through InferEdgeLab
-- [ ] InferEdgeLab direct import workflow
+- [x] TensorRT/ONNX Runtime comparison through InferEdgeLab demo evidence
+- [x] InferEdgeLab direct import workflow through Local Studio / Lab result ingest
 
 ## Version
 
