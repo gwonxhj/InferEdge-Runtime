@@ -1,12 +1,32 @@
 # InferEdge-Runtime
 
+C++ runtime execution and result export layer  
+(ONNX Runtime · TensorRT Jetson · latency statistics · Lab-compatible JSON)
+
 Language: English | [한국어](README.ko.md)
 
 ![CI](https://github.com/gwonxhj/InferEdge-Runtime/actions/workflows/ci.yml/badge.svg)
 
 **GitHub description:** C++ runtime execution and result export layer for ONNX Runtime/TensorRT edge inference validation.
 
-InferEdge is an end-to-end Edge AI inference validation pipeline that connects build provenance, C++ runtime execution, Lab analysis/deployment decision, and optional deterministic diagnosis evidence.
+## Summary
+
+- C++ execution layer for the InferEdge validation pipeline
+- Runs ONNX Runtime CPU and Jetson TensorRT benchmark paths
+- Measures latency statistics and FPS from real Runtime executions
+- Exports Lab-compatible result JSON for compare/report/deployment decision flows
+- Preserves Forge manifest source model identity when running built artifacts
+
+## What Makes InferEdge-Runtime Different?
+
+InferEdge-Runtime is not a benchmark wrapper.
+
+It is an execution evidence layer that:
+
+- validates or runs model/artifact inputs at the Runtime boundary
+- records latency, FPS, system, and provenance context
+- exports structured evidence that Lab can compare and review
+- keeps runtime execution separate from Lab's deployment decision policy
 
 ## Project Overview
 

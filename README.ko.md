@@ -1,8 +1,28 @@
 # InferEdge-Runtime
 
+C++ runtime execution and result export layer  
+(ONNX Runtime · TensorRT Jetson · latency statistics · Lab-compatible JSON)
+
 언어: [English](README.md) | 한국어
 
-InferEdge-Runtime은 InferEdge 전체 파이프라인에서 **C++ runtime execution/result export layer** 역할을 맡는 레포입니다.
+## 요약
+
+- InferEdge validation pipeline의 C++ execution layer입니다.
+- ONNX Runtime CPU와 Jetson TensorRT benchmark path를 실행합니다.
+- 실제 Runtime 실행에서 latency statistics와 FPS를 기록합니다.
+- Lab compare/report/deployment decision 흐름에서 사용할 result JSON을 export합니다.
+- built artifact 실행 시 Forge manifest의 source model identity를 보존합니다.
+
+## InferEdge-Runtime의 차별점
+
+InferEdge-Runtime은 단순한 benchmark wrapper가 아닙니다.
+
+이 레포는 Runtime boundary에서:
+
+- model/artifact input을 검증하거나 실행하고
+- latency, FPS, system, provenance context를 기록하며
+- Lab이 비교/검토할 수 있는 structured evidence를 export하고
+- 실행 evidence와 deployment decision policy를 분리합니다.
 
 InferEdge는 build provenance, C++ Runtime 실행, Lab 분석/deployment decision, optional AIGuard deterministic diagnosis evidence를 연결하는 end-to-end Edge AI inference validation pipeline입니다.
 
