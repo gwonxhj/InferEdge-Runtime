@@ -1,4 +1,5 @@
 build/
+build-ort/
 cmake-build-*/
 deps/
 third_party/
@@ -13,5 +14,6 @@ onnxruntime-*/
 *.exe
 results/
 models/
+examples/model.onnx
 .vscode/
 .idea/
