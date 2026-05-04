@@ -123,6 +123,9 @@ void print_help() {
         << "  --input <image_path>   Optional real image input path (requires OpenCV-enabled build)\n"
         << "  --engine <name>        Runtime engine name (supported: onnxruntime, ort, tensorrt, trt; default: onnxruntime)\n"
         << "  --device <name>        Target device name (supported: cpu, jetson, cuda; default: cpu)\n"
+        << "  --power-mode <name>    Optional Jetson power mode label recorded in result JSON (example: 15W, 25W)\n"
+        << "  --jetson-clocks <state> Optional jetson_clocks state recorded in result JSON (on, off, unknown)\n"
+        << "  --tegrastats-log <path> Optional tegrastats log path parsed into Jetson evidence summary\n"
         << "  --batch <n>            Dummy input batch size, n >= 1 (default: 1)\n"
         << "  --height <n>           Dummy input height, n >= 1 (default: 224)\n"
         << "  --width <n>            Dummy input width, n >= 1 (default: 224)\n"
@@ -183,6 +186,12 @@ RuntimeConfig parse_args(int argc, char** argv) {
             config.device = require_value(argc, argv, i, option);
             config.device_overridden = true;
             validate_device(config.device);
+        } else if (option == "--power-mode") {
+            config.power_mode = require_value(argc, argv, i, option);
+        } else if (option == "--jetson-clocks") {
+            config.jetson_clocks = require_value(argc, argv, i, option);
+        } else if (option == "--tegrastats-log") {
+            config.tegrastats_log_path = require_value(argc, argv, i, option);
         } else if (option == "--batch") {
             config.batch = parse_int_with_minimum(require_value(argc, argv, i, option), option, 1);
             config.batch_overridden = true;
@@ -365,6 +374,9 @@ int run_cli(const RuntimeConfig& config) {
         << "  input_mode: " << config.input_mode() << '\n'
         << "  engine: " << config.engine << '\n'
         << "  device: " << config.device << '\n'
+        << "  power_mode: " << config.power_mode << '\n'
+        << "  jetson_clocks: " << config.jetson_clocks << '\n'
+        << "  tegrastats_log: " << (config.tegrastats_log_path.empty() ? "none" : config.tegrastats_log_path) << '\n'
         << "  batch:  " << config.batch << '\n'
         << "  height: " << config.height << '\n'
         << "  width:  " << config.width << '\n'

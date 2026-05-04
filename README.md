@@ -303,7 +303,19 @@ When TensorRT and CUDA headers/libraries are found, the TensorRT backend reports
 Jetson TensorRT benchmark:
 
 ```bash
-./build-trt/inferedge-runtime --model /home/risenano01/InferEdgeForge/builds/yolov8n__jetson__tensorrt__jetson_fp16/model.engine --engine tensorrt --device jetson --batch 1 --height 640 --width 640 --warmup 10 --runs 50 --output results/tensorrt_benchmark.json
+./build-trt/inferedge-runtime \
+  --model /home/risenano01/InferEdgeForge/builds/yolov8n__jetson__tensorrt__jetson_fp16/model.engine \
+  --engine tensorrt \
+  --device jetson \
+  --power-mode 15W \
+  --jetson-clocks on \
+  --tegrastats-log results/tegrastats_yolov8n_trt_fp16_15w.log \
+  --batch 1 \
+  --height 640 \
+  --width 640 \
+  --warmup 10 \
+  --runs 50 \
+  --output results/tensorrt_benchmark.json
 ```
 
 Expected benchmark behavior:
@@ -315,6 +327,14 @@ Expected benchmark behavior:
 - `fps_value > 0`
 - `model_metadata.inputs` contains `images`
 - `model_metadata.outputs` contains `output0`
+
+Jetson evidence fields are optional CLI inputs used to preserve validation context before importing results into InferEdgeLab:
+
+- `--power-mode`: records the Jetson power mode label, such as `15W`, `25W`, or `MAXN`
+- `--jetson-clocks`: records the observed `jetson_clocks` state, such as `on`, `off`, or `unknown`
+- `--tegrastats-log`: records and parses a tegrastats log into `jetson_evidence.tegrastats_summary`
+
+These fields prepare the Runtime result for Jetson Evidence Track validation. They do not imply that every TensorRT/GPU benchmark or INT8 calibration path is complete.
 
 ## Benchmark Interpretation
 
@@ -360,6 +380,7 @@ Main nested fields:
 - `benchmark`
 - `timestamp`
 - `system`
+- `jetson_evidence`
 - `model_metadata`
 - `extra`
 
@@ -372,6 +393,10 @@ The `extra` object includes:
 - `manifest_recorded`: `true` when `--manifest` was provided, otherwise `false`
 - `manifest_precision`: recorded from `artifact.precision`
 - `manifest_format`: recorded from `artifact.format`
+- `power_mode`: optional Jetson power mode label
+- `jetson_clocks`: optional `jetson_clocks` state
+- `tegrastats_log_path`: optional source log path for thermal/power evidence
+- `tegrastats_status`: `not_provided`, `parsed`, `unavailable`, or `no_samples`
 - `compare_ready`: currently `true`
 - `compare_key`
 - `backend_key`

@@ -42,6 +42,9 @@
     "width": 640,
     "warmup": 3,
     "runs": 10,
+    "power_mode": "unknown",
+    "jetson_clocks": "unknown",
+    "tegrastats_log_path": "",
     "manifest_path": "examples/manifest.sample.json",
     "manifest_applied": true
   },
@@ -66,7 +69,28 @@
   "system": {
     "os": "linux",
     "compiler": "GCC",
-    "cpp_standard": "17"
+    "cpp_standard": "17",
+    "jetson": {
+      "power_mode": "unknown",
+      "jetson_clocks": "unknown",
+      "tegrastats_log_path": ""
+    }
+  },
+  "jetson_evidence": {
+    "power_mode": "unknown",
+    "jetson_clocks": "unknown",
+    "tegrastats_log_path": "",
+    "tegrastats_summary": {
+      "status": "not_provided",
+      "sample_count": 0,
+      "ram_used_mb_avg": 0.0,
+      "ram_used_mb_max": 0.0,
+      "ram_total_mb": 0.0,
+      "max_temp_c": 0.0,
+      "max_temp_name": "",
+      "vdd_in_mw_avg": 0.0,
+      "vdd_in_mw_max": 0.0
+    }
   },
   "model_metadata": {
     "inputs": [
@@ -95,6 +119,10 @@
     "input_mode": "dummy",
     "input_path": "",
     "input_preprocess": "dummy_zero_float32",
+    "power_mode": "unknown",
+    "jetson_clocks": "unknown",
+    "tegrastats_log_path": "",
+    "tegrastats_status": "not_provided",
     "compare_ready": true,
     "compare_key": "yolov8n__b1__h640w640__fp32",
     "backend_key": "onnxruntime__cpu",

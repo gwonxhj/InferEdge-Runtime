@@ -24,6 +24,9 @@ struct RuntimeConfig {
     std::string worker_error_message = "Runtime worker dry-run failure.";
     std::string engine = "onnxruntime";
     std::string device = "cpu";
+    std::string power_mode = "unknown";
+    std::string jetson_clocks = "unknown";
+    std::string tegrastats_log_path;
     int batch = 1;
     int height = 224;
     int width = 224;
