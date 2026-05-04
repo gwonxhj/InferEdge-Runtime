@@ -129,16 +129,16 @@ TensorRT implementation errors should be explicit and actionable. Example messag
 
 ## Jetson Validation Checklist
 
-- [ ] Verify Jetson Orin Nano environment
-- [ ] Verify TensorRT version
-- [ ] Verify CUDA runtime availability
-- [ ] Build with TensorRT enabled
-- [ ] Run TensorRT stub regression
-- [ ] Run real `.engine` metadata load
-- [ ] Run one-shot inference
-- [ ] Run warmup/runs benchmark
-- [ ] Validate JSON with `python3 -m json.tool`
-- [ ] Confirm `results/latest.json`
+- [x] Verify Jetson Orin Nano environment
+- [x] Verify TensorRT version
+- [x] Verify CUDA runtime availability
+- [x] Build with TensorRT enabled
+- [x] Run TensorRT stub regression
+- [x] Run real `.engine` metadata load
+- [x] Run one-shot inference
+- [x] Run warmup/runs benchmark
+- [x] Validate JSON with `python3 -m json.tool`
+- [x] Confirm `results/latest.json`
 - [x] Compare Runtime JSON in InferEdgeLab
 
 ## Non-goals
@@ -164,5 +164,7 @@ TensorRT implementation errors should be explicit and actionable. Example messag
 - [x] Export TensorRT benchmark JSON
 - [x] Validate on Jetson Orin Nano
 - [x] Compare TensorRT result in InferEdgeLab
+- [x] Local Studio demo evidence integration through InferEdgeLab
+- [x] Jetson power-mode evidence fields and tegrastats summary
 - [ ] Output post-processing
-- [ ] Lab comparison workflow
+- [x] Lab comparison workflow

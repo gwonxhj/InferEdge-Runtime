@@ -1,12 +1,12 @@
-# Jetson Evidence Track Preparation
+# Jetson Evidence Track
 
-This document prepares the Runtime side of the InferEdge Jetson Evidence Track.
+This document records the Runtime side of the InferEdge Jetson Evidence Track.
 
 The goal is not to create a new inference server or benchmark product. The goal is to produce Lab-compatible Runtime JSON that preserves Jetson runtime context for deployment validation.
 
 ## Scope
 
-Prepared for the next Jetson smoke step:
+Current evidence:
 
 - ONNX Runtime CPU baseline
 - TensorRT FP16 Jetson candidate
@@ -14,6 +14,16 @@ Prepared for the next Jetson smoke step:
 - `jetson_clocks` state
 - `tegrastats` log summary
 - p50 / p95 / p99 / FPS Runtime JSON fields
+
+## Observed Jetson Evidence
+
+| Evidence | Result path | Power Mode | Mean ms | P95 ms | P99 ms | FPS | Notes |
+|---|---|---|---:|---:|---:|---:|---|
+| TensorRT FP16 25W | `results/jetson_evidence/yolov8n_trt_fp16_25w_20260504T170039Z.json` | 25W | 10.066401 | 15.476641 | 15.548438 | 99.340373 | Local Studio candidate fixture |
+| TensorRT FP16 15W | `results/jetson_evidence/yolov8n_trt_fp16_15w_20260504T171959Z.json` | 15W | 10.799106 | 15.438690 | 15.529218 | 92.600262 | Power-mode comparison fixture |
+
+The 25W and 15W runs are not same-run-config regression evidence.
+They are system evidence that power mode, tegrastats, p95/p99 latency, and FPS should travel with the Runtime result JSON.
 
 Out of scope:
 
