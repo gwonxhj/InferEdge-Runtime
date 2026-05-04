@@ -48,11 +48,15 @@ required = [
     "fps_value",
     "success",
     "status",
+    "jetson_evidence",
 ]
 missing = [key for key in required if key not in data]
 assert not missing, missing
 assert data["status"] == "skipped", data["status"]
 assert data["success"] is False, data["success"]
+assert data["run_config"]["power_mode"] == "unknown", data["run_config"]
+assert data["run_config"]["jetson_clocks"] == "unknown", data["run_config"]
+assert data["jetson_evidence"]["tegrastats_summary"]["status"] == "not_provided"
 PY
 
 INFEREDGE_RUNTIME_RESULT_JSON="${OUTPUT_PATH}" python3 tests/test_lab_result_schema.py

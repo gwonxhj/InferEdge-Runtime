@@ -1,5 +1,7 @@
 import json
 import os
+import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -20,6 +22,7 @@ LAB_COMPATIBLE_REQUIRED_FIELDS = {
     "p95_ms": (int, float),
     "p99_ms": (int, float),
     "run_config": dict,
+    "jetson_evidence": dict,
     "timestamp": str,
 }
 
@@ -82,6 +85,31 @@ def validate_lab_compatible_result(result: dict) -> None:
     for field in ("batch", "height", "width", "warmup", "runs"):
         if field not in run_config:
             raise AssertionError(f"run_config.{field} is required")
+    for field in ("power_mode", "jetson_clocks", "tegrastats_log_path"):
+        if field not in run_config:
+            raise AssertionError(f"run_config.{field} is required")
+
+    jetson_evidence = result["jetson_evidence"]
+    for field in ("power_mode", "jetson_clocks", "tegrastats_log_path", "tegrastats_summary"):
+        if field not in jetson_evidence:
+            raise AssertionError(f"jetson_evidence.{field} is required")
+
+    tegrastats_summary = jetson_evidence["tegrastats_summary"]
+    if not isinstance(tegrastats_summary, dict):
+        raise AssertionError("jetson_evidence.tegrastats_summary must be an object")
+    for field in (
+        "status",
+        "sample_count",
+        "ram_used_mb_avg",
+        "ram_used_mb_max",
+        "ram_total_mb",
+        "max_temp_c",
+        "max_temp_name",
+        "vdd_in_mw_avg",
+        "vdd_in_mw_max",
+    ):
+        if field not in tegrastats_summary:
+            raise AssertionError(f"jetson_evidence.tegrastats_summary.{field} is required")
 
     latency = result.get("latency_ms")
     if not isinstance(latency, dict):
@@ -97,6 +125,58 @@ def validate_lab_compatible_result(result: dict) -> None:
 
     if result.get("backend_key") is not None and not isinstance(result["backend_key"], str):
         raise AssertionError("backend_key must be a string when present")
+
+
+class JetsonEvidenceContractTest(unittest.TestCase):
+    def test_runtime_binary_parses_tegrastats_log_when_available(self):
+        runtime_binary = ROOT / "build" / "inferedge-runtime"
+        if not runtime_binary.exists():
+            self.skipTest("runtime binary was not built")
+
+        tegrastats_log = ROOT / "tests" / "fixtures" / "tegrastats_sample.log"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_path = Path(temp_dir) / "jetson_evidence_contract.json"
+            subprocess.run(
+                [
+                    str(runtime_binary),
+                    "--model",
+                    "models/sample.onnx",
+                    "--engine",
+                    "onnxruntime",
+                    "--device",
+                    "cpu",
+                    "--power-mode",
+                    "15W",
+                    "--jetson-clocks",
+                    "on",
+                    "--tegrastats-log",
+                    str(tegrastats_log),
+                    "--warmup",
+                    "1",
+                    "--runs",
+                    "1",
+                    "--output",
+                    str(output_path),
+                ],
+                cwd=ROOT,
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+
+            result = load_json(output_path)
+
+        validate_lab_compatible_result(result)
+        self.assertEqual(result["run_config"]["power_mode"], "15W")
+        self.assertEqual(result["run_config"]["jetson_clocks"], "on")
+        summary = result["jetson_evidence"]["tegrastats_summary"]
+        self.assertEqual(summary["status"], "parsed")
+        self.assertEqual(summary["sample_count"], 2)
+        self.assertEqual(summary["ram_used_mb_max"], 2304)
+        self.assertEqual(summary["ram_total_mb"], 7620)
+        self.assertEqual(summary["max_temp_name"], "cpu")
+        self.assertEqual(summary["max_temp_c"], 45.0)
+        self.assertEqual(summary["vdd_in_mw_max"], 3100)
 
 
 if __name__ == "__main__":

@@ -48,6 +48,7 @@ ONNX model
 - ONNX Runtime CPU benchmark/result JSON export
 - Jetson TensorRT linked build 실행 evidence
 - mean, p50, p95, p99, FPS 등 latency/profiling 결과 export
+- Jetson Evidence Track용 power mode / jetson_clocks / tegrastats summary context export
 - Lab-compatible result schema fixture/test
 - Forge manifest source model identity preservation
 
@@ -89,6 +90,17 @@ cmake --build build -j
 - **InferEdgeForge:** Runtime이 실행할 artifact와 manifest/metadata provenance를 생성합니다.
 - **InferEdgeLab:** Runtime result JSON을 분석해 compare/report/API/job/deployment decision을 생성합니다.
 - **InferEdgeAIGuard:** Runtime provenance와 Forge provenance를 비교해 optional diagnosis evidence를 제공합니다.
+
+## Jetson Evidence Track 준비
+
+Runtime JSON은 Jetson Orin Nano 실측 전후로 validation context를 보존할 수 있습니다.
+
+지원 context:
+- `--power-mode`: `15W`, `25W`, `MAXN` 같은 power mode label 기록
+- `--jetson-clocks`: `on`, `off`, `unknown` 같은 jetson_clocks 상태 기록
+- `--tegrastats-log`: tegrastats log를 읽어 temperature / memory / VDD_IN summary를 `jetson_evidence`에 기록
+
+이 기능은 TensorRT/GPU benchmark 전체 완료나 INT8 calibration 완료를 의미하지 않습니다. 목적은 InferEdgeLab이 p95/p99 latency, FPS, power mode, thermal behavior를 deployment validation evidence로 해석할 수 있게 하는 것입니다.
 
 ## 현재 범위와 future work
 

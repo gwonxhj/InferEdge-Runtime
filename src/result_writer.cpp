@@ -1,10 +1,12 @@
 #include "inferedge_runtime/result_writer.hpp"
 
+#include <algorithm>
 #include <cctype>
 #include <chrono>
 #include <ctime>
 #include <fstream>
 #include <iomanip>
+#include <regex>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -158,6 +160,105 @@ std::string compiler_name() {
 #endif
 }
 
+struct TegrastatsSummary {
+    std::string status = "not_provided";
+    int sample_count = 0;
+    double ram_used_mb_avg = 0.0;
+    double ram_used_mb_max = 0.0;
+    double ram_total_mb = 0.0;
+    double max_temp_c = 0.0;
+    std::string max_temp_name;
+    double vdd_in_mw_avg = 0.0;
+    double vdd_in_mw_max = 0.0;
+};
+
+TegrastatsSummary parse_tegrastats_log(const std::string& path) {
+    TegrastatsSummary summary;
+    if (path.empty()) {
+        return summary;
+    }
+
+    std::ifstream input(path);
+    if (!input) {
+        summary.status = "unavailable";
+        return summary;
+    }
+
+    summary.status = "parsed";
+    const std::regex ram_pattern(R"(RAM\s+([0-9]+)/([0-9]+)MB)");
+    const std::regex temp_pattern(R"(([A-Za-z0-9_]+)@([0-9]+(?:\.[0-9]+)?)C)");
+    const std::regex vdd_in_pattern(R"(VDD_IN\s+([0-9]+)mW(/([0-9]+)mW)?)");
+
+    std::string line;
+    double ram_used_sum = 0.0;
+    int ram_samples = 0;
+    double vdd_in_sum = 0.0;
+    int vdd_in_samples = 0;
+
+    while (std::getline(input, line)) {
+        if (line.empty()) {
+            continue;
+        }
+        summary.sample_count += 1;
+
+        std::smatch match;
+        if (std::regex_search(line, match, ram_pattern)) {
+            const double used = std::stod(match[1].str());
+            const double total = std::stod(match[2].str());
+            ram_used_sum += used;
+            ram_samples += 1;
+            summary.ram_used_mb_max = std::max(summary.ram_used_mb_max, used);
+            summary.ram_total_mb = total;
+        }
+
+        for (auto it = std::sregex_iterator(line.begin(), line.end(), temp_pattern);
+             it != std::sregex_iterator();
+             ++it) {
+            const std::smatch temp_match = *it;
+            const double temp_c = std::stod(temp_match[2].str());
+            if (temp_c > summary.max_temp_c) {
+                summary.max_temp_c = temp_c;
+                summary.max_temp_name = temp_match[1].str();
+            }
+        }
+
+        if (std::regex_search(line, match, vdd_in_pattern)) {
+            const double vdd_in = std::stod(match[1].str());
+            vdd_in_sum += vdd_in;
+            vdd_in_samples += 1;
+            summary.vdd_in_mw_max = std::max(summary.vdd_in_mw_max, vdd_in);
+        }
+    }
+
+    if (summary.sample_count == 0) {
+        summary.status = "no_samples";
+    }
+    if (ram_samples > 0) {
+        summary.ram_used_mb_avg = ram_used_sum / static_cast<double>(ram_samples);
+    }
+    if (vdd_in_samples > 0) {
+        summary.vdd_in_mw_avg = vdd_in_sum / static_cast<double>(vdd_in_samples);
+    }
+
+    return summary;
+}
+
+void write_tegrastats_summary_json(std::ostream& output, const TegrastatsSummary& summary, int indent_spaces) {
+    const std::string indent(static_cast<std::size_t>(indent_spaces), ' ');
+    output
+        << "{\n"
+        << indent << "  \"status\": " << json_string(summary.status) << ",\n"
+        << indent << "  \"sample_count\": " << summary.sample_count << ",\n"
+        << indent << "  \"ram_used_mb_avg\": " << summary.ram_used_mb_avg << ",\n"
+        << indent << "  \"ram_used_mb_max\": " << summary.ram_used_mb_max << ",\n"
+        << indent << "  \"ram_total_mb\": " << summary.ram_total_mb << ",\n"
+        << indent << "  \"max_temp_c\": " << summary.max_temp_c << ",\n"
+        << indent << "  \"max_temp_name\": " << json_string(summary.max_temp_name) << ",\n"
+        << indent << "  \"vdd_in_mw_avg\": " << summary.vdd_in_mw_avg << ",\n"
+        << indent << "  \"vdd_in_mw_max\": " << summary.vdd_in_mw_max << "\n"
+        << indent << "}";
+}
+
 void write_shape_json(std::ostream& output, const std::vector<int64_t>& shape) {
     output << '[';
     for (std::size_t i = 0; i < shape.size(); ++i) {
@@ -240,6 +341,7 @@ std::filesystem::path write_result_json(
     const std::string compare_name = compare_model_name(config);
     const std::string compare_source = compare_model_source(config);
     const std::string precision = config.manifest_precision.empty() ? "fp32" : config.manifest_precision;
+    const TegrastatsSummary tegrastats_summary = parse_tegrastats_log(config.tegrastats_log_path);
 
     std::ostringstream output;
     output << std::fixed << std::setprecision(6);
@@ -289,6 +391,9 @@ std::filesystem::path write_result_json(
         << "    \"width\": " << config.width << ",\n"
         << "    \"warmup\": " << config.warmup << ",\n"
         << "    \"runs\": " << config.runs << ",\n"
+        << "    \"power_mode\": " << json_string(config.power_mode) << ",\n"
+        << "    \"jetson_clocks\": " << json_string(config.jetson_clocks) << ",\n"
+        << "    \"tegrastats_log_path\": " << json_string(config.tegrastats_log_path) << ",\n"
         << "    \"manifest_path\": " << json_string(config.manifest_path) << ",\n"
         << "    \"manifest_applied\": " << (config.manifest_applied ? "true" : "false") << "\n"
         << "  },\n"
@@ -316,7 +421,21 @@ std::filesystem::path write_result_json(
         << "  \"system\": {\n"
         << "    \"os\": " << json_string(system_os_name()) << ",\n"
         << "    \"compiler\": " << json_string(compiler_name()) << ",\n"
-        << "    \"cpp_standard\": \"17\"\n"
+        << "    \"cpp_standard\": \"17\",\n"
+        << "    \"jetson\": {\n"
+        << "      \"power_mode\": " << json_string(config.power_mode) << ",\n"
+        << "      \"jetson_clocks\": " << json_string(config.jetson_clocks) << ",\n"
+        << "      \"tegrastats_log_path\": " << json_string(config.tegrastats_log_path) << "\n"
+        << "    }\n"
+        << "  },\n"
+        << "  \"jetson_evidence\": {\n"
+        << "    \"power_mode\": " << json_string(config.power_mode) << ",\n"
+        << "    \"jetson_clocks\": " << json_string(config.jetson_clocks) << ",\n"
+        << "    \"tegrastats_log_path\": " << json_string(config.tegrastats_log_path) << ",\n"
+        << "    \"tegrastats_summary\": ";
+    write_tegrastats_summary_json(output, tegrastats_summary, 4);
+    output
+        << "\n"
         << "  },\n"
         << "  \"model_metadata\": {\n"
         << "    \"inputs\": ";
@@ -344,6 +463,10 @@ std::filesystem::path write_result_json(
         << "    \"input_mode\": " << json_string(config.input_mode()) << ",\n"
         << "    \"input_path\": " << json_string(config.input_path) << ",\n"
         << "    \"input_preprocess\": " << json_string(config.input_preprocess()) << ",\n"
+        << "    \"power_mode\": " << json_string(config.power_mode) << ",\n"
+        << "    \"jetson_clocks\": " << json_string(config.jetson_clocks) << ",\n"
+        << "    \"tegrastats_log_path\": " << json_string(config.tegrastats_log_path) << ",\n"
+        << "    \"tegrastats_status\": " << json_string(tegrastats_summary.status) << ",\n"
         << "    \"compare_ready\": true,\n"
         << "    \"compare_key\": " << json_string(compare_key) << ",\n"
         << "    \"backend_key\": " << json_string(backend_key) << ",\n"
