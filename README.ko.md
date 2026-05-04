@@ -91,14 +91,23 @@ cmake --build build -j
 - **InferEdgeLab:** Runtime result JSON을 분석해 compare/report/API/job/deployment decision을 생성합니다.
 - **InferEdgeAIGuard:** Runtime provenance와 Forge provenance를 비교해 optional diagnosis evidence를 제공합니다.
 
-## Jetson Evidence Track 준비
+## Jetson Evidence Track
 
-Runtime JSON은 Jetson Orin Nano 실측 전후로 validation context를 보존할 수 있습니다.
+Runtime JSON은 Jetson Orin Nano 실측 validation context를 보존합니다.
 
 지원 context:
 - `--power-mode`: `15W`, `25W`, `MAXN` 같은 power mode label 기록
 - `--jetson-clocks`: `on`, `off`, `unknown` 같은 jetson_clocks 상태 기록
 - `--tegrastats-log`: tegrastats log를 읽어 temperature / memory / VDD_IN summary를 `jetson_evidence`에 기록
+
+현재 기록된 evidence:
+
+| Evidence | Backend | Precision | Power Mode | Mean ms | P95 ms | P99 ms | FPS |
+|---|---|---|---|---:|---:|---:|---:|
+| TensorRT short smoke | tensorrt__jetson | FP16 | 25W | 10.066401 | 15.476641 | 15.548438 | 99.340373 |
+| TensorRT power-mode evidence | tensorrt__jetson | FP16 | 15W | 10.799106 | 15.438690 | 15.529218 | 92.600262 |
+
+15W와 25W는 power mode가 다르므로 같은 run configuration의 latency regression으로 해석하지 않고, deployment validation을 위한 system evidence로 해석합니다.
 
 이 기능은 TensorRT/GPU benchmark 전체 완료나 INT8 calibration 완료를 의미하지 않습니다. 목적은 InferEdgeLab이 p95/p99 latency, FPS, power mode, thermal behavior를 deployment validation evidence로 해석할 수 있게 하는 것입니다.
 

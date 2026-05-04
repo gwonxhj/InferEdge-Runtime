@@ -95,10 +95,11 @@ Runtime does not own comparison policy or final deployment judgement. InferEdgeL
 - limited manifest default apply for Forge handoff preparation
 - Lab worker adapter contract fixture/test coverage
 - Lab worker response dry-run export for contract smoke testing
-- TensorRT backend stub for future Jetson integration
+- TensorRT backend stub for default/non-linked builds
 - TensorRT engine deserialization and metadata extraction on Jetson linked builds
 - TensorRT one-shot dummy inference on Jetson linked builds
 - TensorRT benchmark runner on Jetson linked builds
+- Jetson Evidence Track fields for power mode, jetson_clocks, tegrastats summary, and Lab-compatible result import
 - documented benchmark measurement policy
 
 ## Current Limitations
@@ -117,6 +118,19 @@ Runtime does not own comparison policy or final deployment judgement. InferEdgeL
 - ORT linked smoke test remains local/manual because it requires external ONNX Runtime and model files
 
 TensorRT backend execution is implemented for Jetson-oriented linked builds. The current Mac/default build keeps TensorRT as a stub and does not link TensorRT or CUDA. See [docs/tensorrt_backend_plan.md](docs/tensorrt_backend_plan.md) for the Jetson Orin Nano implementation plan.
+
+## Jetson Evidence Track
+
+The current Jetson Evidence Track has been validated on Jetson Orin Nano through a TensorRT FP16 linked build and Lab-compatible Runtime JSON export.
+These records are deployment validation evidence, not a production inference server or a `trtexec` GPU-only benchmark.
+
+| Evidence | Backend | Precision | Power Mode | Mean ms | P95 ms | P99 ms | FPS |
+|---|---|---|---|---:|---:|---:|---:|
+| TensorRT short smoke | tensorrt__jetson | FP16 | 25W | 10.066401 | 15.476641 | 15.548438 | 99.340373 |
+| TensorRT power-mode evidence | tensorrt__jetson | FP16 | 15W | 10.799106 | 15.438690 | 15.529218 | 92.600262 |
+
+The 15W and 25W outputs include tegrastats-derived context and should be interpreted as different run configurations.
+InferEdgeLab owns comparison and deployment decision interpretation.
 
 ## Requirements
 
