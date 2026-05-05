@@ -19,6 +19,10 @@ struct RuntimeConfig {
     std::string manifest_build_id;
     std::string model_path;
     std::string input_path;
+    std::string result_json_path;
+    std::string base_result_json_path;
+    std::string candidate_result_json_path;
+    std::string report_output_path;
     std::string worker_response_output_path;
     std::string worker_response_status = "completed";
     std::string worker_error_message = "Runtime worker dry-run failure.";
@@ -46,6 +50,8 @@ struct RuntimeConfig {
     bool validate_forge_handoff = false;
     bool validate_lab_worker_request = false;
     bool export_worker_response = false;
+    bool report_jetson_evidence = false;
+    bool compare_power_modes = false;
 
     bool has_real_input() const {
         return !input_path.empty();

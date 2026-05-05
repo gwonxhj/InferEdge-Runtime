@@ -1,6 +1,7 @@
 #include "inferedge_runtime/cli.hpp"
 
 #include "inferedge_runtime/engine.hpp"
+#include "inferedge_runtime/jetson_report.hpp"
 #include "inferedge_runtime/lab_worker_request.hpp"
 #include "inferedge_runtime/manifest.hpp"
 #include "inferedge_runtime/result_writer.hpp"
@@ -126,6 +127,12 @@ void print_help() {
         << "  --power-mode <name>    Optional Jetson power mode label recorded in result JSON (example: 15W, 25W)\n"
         << "  --jetson-clocks <state> Optional jetson_clocks state recorded in result JSON (on, off, unknown)\n"
         << "  --tegrastats-log <path> Optional tegrastats log path parsed into Jetson evidence summary\n"
+        << "  --report-jetson-evidence Generate a Markdown Jetson evidence report from Runtime JSON and exit\n"
+        << "  --result-json <path> Runtime result JSON path used by --report-jetson-evidence\n"
+        << "  --compare-power-modes Generate a Markdown 15W/25W-style power-mode comparison report and exit\n"
+        << "  --base-result <path> Base Runtime result JSON used by --compare-power-modes\n"
+        << "  --candidate-result <path> Candidate Runtime result JSON used by --compare-power-modes\n"
+        << "  --report-output <path> Markdown report output path for report-only modes\n"
         << "  --batch <n>            Dummy input batch size, n >= 1 (default: 1)\n"
         << "  --height <n>           Dummy input height, n >= 1 (default: 224)\n"
         << "  --width <n>            Dummy input width, n >= 1 (default: 224)\n"
@@ -192,6 +199,18 @@ RuntimeConfig parse_args(int argc, char** argv) {
             config.jetson_clocks = require_value(argc, argv, i, option);
         } else if (option == "--tegrastats-log") {
             config.tegrastats_log_path = require_value(argc, argv, i, option);
+        } else if (option == "--report-jetson-evidence") {
+            config.report_jetson_evidence = true;
+        } else if (option == "--result-json") {
+            config.result_json_path = require_value(argc, argv, i, option);
+        } else if (option == "--compare-power-modes") {
+            config.compare_power_modes = true;
+        } else if (option == "--base-result") {
+            config.base_result_json_path = require_value(argc, argv, i, option);
+        } else if (option == "--candidate-result") {
+            config.candidate_result_json_path = require_value(argc, argv, i, option);
+        } else if (option == "--report-output") {
+            config.report_output_path = require_value(argc, argv, i, option);
         } else if (option == "--batch") {
             config.batch = parse_int_with_minimum(require_value(argc, argv, i, option), option, 1);
             config.batch_overridden = true;
@@ -243,6 +262,25 @@ RuntimeConfig parse_args(int argc, char** argv) {
             " (supported: completed, failed)");
     }
 
+    const int report_mode_count =
+        (config.report_jetson_evidence ? 1 : 0) +
+        (config.compare_power_modes ? 1 : 0) +
+        (config.export_worker_response ? 1 : 0) +
+        (config.validate_forge_handoff ? 1 : 0) +
+        (config.validate_lab_worker_request ? 1 : 0);
+    if (report_mode_count > 1) {
+        throw std::invalid_argument(
+            "use only one dry-run/report mode: --report-jetson-evidence, --compare-power-modes, "
+            "--validate-forge-handoff, --validate-lab-worker-request, or --export-worker-response");
+    }
+    if (config.report_jetson_evidence && config.result_json_path.empty()) {
+        throw std::invalid_argument("--result-json is required with --report-jetson-evidence");
+    }
+    if (config.compare_power_modes &&
+        (config.base_result_json_path.empty() || config.candidate_result_json_path.empty())) {
+        throw std::invalid_argument("--base-result and --candidate-result are required with --compare-power-modes");
+    }
+
     ManifestConfig manifest;
     if (!config.forge_metadata_path.empty()) {
         config.manifest_path = config.forge_metadata_path;
@@ -266,6 +304,38 @@ RuntimeConfig parse_args(int argc, char** argv) {
 }
 
 int run_cli(const RuntimeConfig& config) {
+    if (config.report_jetson_evidence) {
+        const std::string output_path =
+            config.report_output_path.empty() ? "reports/jetson_evidence_summary.md" : config.report_output_path;
+        const std::filesystem::path report_path = write_jetson_evidence_markdown_report(
+            config.result_json_path,
+            config.tegrastats_log_path,
+            output_path);
+        std::cout
+            << "Jetson evidence Markdown report\n"
+            << "  result: " << config.result_json_path << '\n'
+            << "  tegrastats_log: " << (config.tegrastats_log_path.empty() ? "embedded result JSON" : config.tegrastats_log_path) << '\n'
+            << "  output: " << report_path.string() << '\n'
+            << "  status: written\n";
+        return 0;
+    }
+
+    if (config.compare_power_modes) {
+        const std::string output_path =
+            config.report_output_path.empty() ? "reports/jetson_power_mode_comparison.md" : config.report_output_path;
+        const std::filesystem::path report_path = write_power_mode_comparison_markdown_report(
+            config.base_result_json_path,
+            config.candidate_result_json_path,
+            output_path);
+        std::cout
+            << "Jetson power-mode Markdown comparison\n"
+            << "  base: " << config.base_result_json_path << '\n'
+            << "  candidate: " << config.candidate_result_json_path << '\n'
+            << "  output: " << report_path.string() << '\n'
+            << "  status: written\n";
+        return 0;
+    }
+
     if (config.export_worker_response) {
         if (config.lab_worker_request_path.empty()) {
             std::cerr << "Lab worker request path is required for --export-worker-response\n";

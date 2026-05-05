@@ -69,6 +69,24 @@ python3 tests/test_manifest_compare_identity.py
 
 The default smoke confirms that the JSON contract exists even when no Jetson context is provided.
 
+The same smoke also verifies local Markdown report generation from fixture evidence:
+
+```bash
+./build/inferedge-runtime \
+  --report-jetson-evidence \
+  --result-json tests/fixtures/jetson_tensorrt_25w_result.json \
+  --tegrastats-log tests/fixtures/tegrastats_sample.log \
+  --report-output reports/jetson_evidence_summary.md
+
+./build/inferedge-runtime \
+  --compare-power-modes \
+  --base-result tests/fixtures/jetson_tensorrt_25w_result.json \
+  --candidate-result tests/fixtures/jetson_tensorrt_15w_result.json \
+  --report-output reports/jetson_power_mode_comparison.md
+```
+
+These reports are handoff summaries for review/portfolio documentation. They do not change the Runtime JSON contract and do not perform Lab deployment decision logic.
+
 ## Jetson Smoke Template
 
 On Jetson, capture tegrastats in parallel with the Runtime command:

@@ -111,6 +111,24 @@ Runtime JSON은 Jetson Orin Nano 실측 validation context를 보존합니다.
 
 이 기능은 TensorRT/GPU benchmark 전체 완료나 INT8 calibration 완료를 의미하지 않습니다. 목적은 InferEdgeLab이 p95/p99 latency, FPS, power mode, thermal behavior를 deployment validation evidence로 해석할 수 있게 하는 것입니다.
 
+Jetson evidence는 Markdown 리포트로도 export할 수 있습니다.
+
+```bash
+./build/inferedge-runtime \
+  --report-jetson-evidence \
+  --result-json tests/fixtures/jetson_tensorrt_25w_result.json \
+  --tegrastats-log tests/fixtures/tegrastats_sample.log \
+  --report-output reports/jetson_evidence_summary.md
+
+./build/inferedge-runtime \
+  --compare-power-modes \
+  --base-result tests/fixtures/jetson_tensorrt_25w_result.json \
+  --candidate-result tests/fixtures/jetson_tensorrt_15w_result.json \
+  --report-output reports/jetson_power_mode_comparison.md
+```
+
+Markdown 리포트는 Runtime JSON과 tegrastats evidence를 사람이 읽기 쉽게 정리하는 용도입니다. 비교 정책과 deployment decision 해석은 InferEdgeLab이 담당합니다.
+
 ## 현재 범위와 future work
 
 현재는 C++ execution/result export와 contract validation 중심입니다. ONNX Runtime CPU와 Jetson TensorRT smoke evidence가 있지만, production worker daemon이나 persistent queue/DB는 포함하지 않습니다.
