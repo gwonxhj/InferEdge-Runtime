@@ -1,0 +1,53 @@
+{
+  "schema_version": "inferedge-runtime-result-v1",
+  "compare_key": "yolov8n__b1__h640w640__fp16",
+  "backend_key": "tensorrt__jetson",
+  "model_name": "model.engine",
+  "model_path": "/home/risenano01/InferEdgeForge/builds/yolov8n__jetson__tensorrt__jetson_fp16/model.engine",
+  "engine_name": "tensorrt",
+  "engine_backend": "tensorrt",
+  "device_name": "jetson",
+  "precision": "fp16",
+  "batch": 1,
+  "height": 640,
+  "width": 640,
+  "mean_ms": 10.066401,
+  "p50_ms": 9.908564,
+  "p95_ms": 15.476641,
+  "p99_ms": 15.548438,
+  "fps_value": 99.340373,
+  "timestamp": "2026-05-04T17:00:41Z",
+  "run_config": {
+    "batch": 1,
+    "height": 640,
+    "width": 640,
+    "warmup": 10,
+    "runs": 50,
+    "power_mode": "25W",
+    "jetson_clocks": "unknown",
+    "tegrastats_log_path": "results/jetson_evidence/tegrastats_yolov8n_trt_fp16_25w.log"
+  },
+  "latency_ms": {
+    "mean": 10.066401,
+    "p50": 9.908564,
+    "p95": 15.476641,
+    "p99": 15.548438
+  },
+  "fps": 99.340373,
+  "jetson_evidence": {
+    "power_mode": "25W",
+    "jetson_clocks": "unknown",
+    "tegrastats_log_path": "results/jetson_evidence/tegrastats_yolov8n_trt_fp16_25w.log",
+    "tegrastats_summary": {
+      "status": "parsed",
+      "sample_count": 3,
+      "ram_used_mb_avg": 947.666667,
+      "ram_used_mb_max": 1072.0,
+      "ram_total_mb": 7620.0,
+      "max_temp_c": 40.656,
+      "max_temp_name": "gpu",
+      "vdd_in_mw_avg": 4863.0,
+      "vdd_in_mw_max": 5827.0
+    }
+  }
+}

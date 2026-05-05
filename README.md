@@ -350,6 +350,24 @@ Jetson evidence fields are optional CLI inputs used to preserve validation conte
 
 These fields prepare the Runtime result for Jetson Evidence Track validation. They do not imply that every TensorRT/GPU benchmark or INT8 calibration path is complete.
 
+Jetson evidence can also be exported as Markdown for portfolio/review handoff:
+
+```bash
+./build/inferedge-runtime \
+  --report-jetson-evidence \
+  --result-json tests/fixtures/jetson_tensorrt_25w_result.json \
+  --tegrastats-log tests/fixtures/tegrastats_sample.log \
+  --report-output reports/jetson_evidence_summary.md
+
+./build/inferedge-runtime \
+  --compare-power-modes \
+  --base-result tests/fixtures/jetson_tensorrt_25w_result.json \
+  --candidate-result tests/fixtures/jetson_tensorrt_15w_result.json \
+  --report-output reports/jetson_power_mode_comparison.md
+```
+
+The Markdown reports summarize Runtime JSON and tegrastats evidence only. InferEdgeLab remains responsible for comparison policy and deployment decision interpretation.
+
 ## Benchmark Interpretation
 
 InferEdgeRuntime measures end-to-end inference latency. The reported `latency_ms` values include memory transfer and synchronization overhead in addition to backend execution.

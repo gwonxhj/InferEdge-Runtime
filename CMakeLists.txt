@@ -29,6 +29,7 @@ add_executable(inferedge-runtime
     src/main.cpp
     src/cli.cpp
     src/engine.cpp
+    src/jetson_report.cpp
     src/lab_worker_request.cpp
     src/manifest.cpp
     src/result_writer.cpp
