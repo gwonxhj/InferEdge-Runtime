@@ -368,6 +368,11 @@ Jetson evidence can also be exported as Markdown for portfolio/review handoff:
 
 The Markdown reports summarize Runtime JSON and tegrastats evidence only. InferEdgeLab remains responsible for comparison policy and deployment decision interpretation.
 
+Committed report snapshots:
+
+- [Jetson evidence summary](docs/reports/jetson_evidence_summary.md)
+- [Jetson power-mode comparison](docs/reports/jetson_power_mode_comparison.md)
+
 ## Benchmark Interpretation
 
 InferEdgeRuntime measures end-to-end inference latency. The reported `latency_ms` values include memory transfer and synchronization overhead in addition to backend execution.

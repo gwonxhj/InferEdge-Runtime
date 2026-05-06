@@ -87,6 +87,11 @@ The same smoke also verifies local Markdown report generation from fixture evide
 
 These reports are handoff summaries for review/portfolio documentation. They do not change the Runtime JSON contract and do not perform Lab deployment decision logic.
 
+Committed report snapshots:
+
+- [Jetson evidence summary](reports/jetson_evidence_summary.md)
+- [Jetson power-mode comparison](reports/jetson_power_mode_comparison.md)
+
 ## Jetson Smoke Template
 
 On Jetson, capture tegrastats in parallel with the Runtime command:
