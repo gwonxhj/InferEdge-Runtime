@@ -129,6 +129,11 @@ Jetson evidence는 Markdown 리포트로도 export할 수 있습니다.
 
 Markdown 리포트는 Runtime JSON과 tegrastats evidence를 사람이 읽기 쉽게 정리하는 용도입니다. 비교 정책과 deployment decision 해석은 InferEdgeLab이 담당합니다.
 
+제출/검토용으로 고정한 report snapshot:
+
+- [Jetson evidence summary](docs/reports/jetson_evidence_summary.md)
+- [Jetson power-mode comparison](docs/reports/jetson_power_mode_comparison.md)
+
 ## 현재 범위와 future work
 
 현재는 C++ execution/result export와 contract validation 중심입니다. ONNX Runtime CPU와 Jetson TensorRT smoke evidence가 있지만, production worker daemon이나 persistent queue/DB는 포함하지 않습니다.
