@@ -55,6 +55,9 @@ ONNX model
 -> InferEdgeLab compare / API / job workflow / deployment_decision
 -> optional InferEdgeAIGuard provenance diagnosis
 -> deploy / review / blocked decision
+
+Supporting sidecar:
+InferEdgeEnv -> local-first run evidence registry / comparability checker
 ```
 
 In that pipeline, Runtime is responsible for the execution boundary: it validates or runs model/artifact inputs, measures latency, exports Lab-compatible result JSON, and can emit dry-run worker response payloads for Lab integration smoke tests.
@@ -77,6 +80,8 @@ Planned later:
 - production hardening beyond the current manual/dev linked-build validation path
 
 Runtime does not own comparison policy or final deployment judgement. InferEdgeLab owns `deployment_decision`, while Runtime supplies trustworthy execution and profiling evidence.
+
+Portfolio boundary: InferEdgeLab is the validation / decision layer. InferEdgeEnv is the run evidence registry / comparability layer; it records whether benchmark evidence can be trusted and compared without replacing Runtime execution or Lab deployment decisions.
 
 ## Current Capabilities
 
