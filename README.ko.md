@@ -33,8 +33,8 @@ ONNX model
 -> InferEdgeLab compare/API/job/deployment_decision
 -> optional InferEdgeAIGuard diagnosis evidence
 
-Supporting sidecar:
-InferEdgeEnv -> local-first run evidence registry / comparability checker
+Experiment hygiene / comparability layer:
+InferEdgeEnv -> v0.1.5 v1-complete local-first run evidence registry / comparability checker
 ```
 
 ## 이 레포의 역할
@@ -93,9 +93,9 @@ cmake --build build -j
 - **InferEdgeForge:** Runtime이 실행할 artifact와 manifest/metadata provenance를 생성합니다.
 - **InferEdgeLab:** Runtime result JSON을 분석해 compare/report/API/job/deployment decision을 생성합니다.
 - **InferEdgeAIGuard:** Runtime provenance와 Forge provenance를 비교해 optional diagnosis evidence를 제공합니다.
-- **InferEdgeEnv:** benchmark run evidence를 local artifact와 SQLite registry로 고정하고 비교 가능성을 판정하는 run evidence registry / comparability layer입니다.
+- **InferEdgeEnv:** `v0.1.5` v1-complete 상태의 experiment hygiene / comparability layer로, benchmark run evidence를 local artifact와 SQLite registry로 고정하고 비교 가능성을 판정합니다.
 
-포트폴리오 경계: InferEdgeLab은 validation / decision layer이고, InferEdgeEnv는 run evidence registry / comparability layer입니다. Runtime은 execution/result export를 소유하고, Env는 benchmark evidence가 신뢰 가능하고 비교 가능한 형태인지 관리합니다.
+포트폴리오 경계: InferEdgeLab은 validation / decision layer이고, InferEdgeEnv는 `v0.1.5` v1-complete experiment hygiene / comparability layer입니다. Runtime은 execution/result export를 소유하고, Env는 benchmark evidence가 신뢰 가능하고 비교 가능한 형태인지 관리합니다.
 
 ## Jetson Evidence Track
 
