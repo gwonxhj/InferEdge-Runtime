@@ -24,6 +24,7 @@ Current evidence:
 
 The 25W and 15W runs are not same-run-config regression evidence.
 They are system evidence that power mode, tegrastats, p95/p99 latency, and FPS should travel with the Runtime result JSON.
+The committed snapshots are currently `short_smoke` evidence. Runtime Markdown reports now label `capture_depth` so a future 5-10 minute Jetson run can be recorded as `sustained_candidate` or `sustained` without changing the Lab-compatible result JSON schema.
 
 Out of scope:
 
@@ -86,6 +87,7 @@ The same smoke also verifies local Markdown report generation from fixture evide
 ```
 
 These reports are handoff summaries for review/portfolio documentation. They do not change the Runtime JSON contract and do not perform Lab deployment decision logic.
+They include a run-depth section derived from `run_config.runs` and `jetson_evidence.tegrastats_summary.sample_count`. Short smoke evidence must not be described as sustained thermal validation.
 
 Committed report snapshots:
 
@@ -123,5 +125,6 @@ Repeat with `--power-mode 25W` only after the Jetson power mode has actually bee
 
 - `mean_ms` alone is not enough for deployment evidence.
 - `p95_ms`, `p99_ms`, FPS, power mode, and thermal behavior should be reviewed together.
+- `capture_depth=short_smoke` means the result is device/contract evidence, not sustained stability evidence.
 - INT8 calibration remains future work.
 - Runtime exports evidence; InferEdgeLab owns interpretation and deployment decision.

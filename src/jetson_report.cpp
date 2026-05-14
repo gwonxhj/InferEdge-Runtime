@@ -36,6 +36,8 @@ struct RuntimeEvidence {
     std::string jetson_clocks;
     std::string tegrastats_log_path;
     std::string timestamp;
+    int warmup = 0;
+    int runs = 0;
     double mean_ms = 0.0;
     double p50_ms = 0.0;
     double p95_ms = 0.0;
@@ -163,6 +165,26 @@ std::string fmt(double value) {
     return text;
 }
 
+std::string capture_depth_label(int runs, int tegrastats_samples) {
+    if (runs >= 500 || tegrastats_samples >= 300) {
+        return "sustained";
+    }
+    if (runs >= 100 || tegrastats_samples >= 60) {
+        return "sustained_candidate";
+    }
+    return "short_smoke";
+}
+
+std::string capture_depth_note(const std::string& depth) {
+    if (depth == "sustained") {
+        return "Longer run evidence suitable for thermal/power stability review.";
+    }
+    if (depth == "sustained_candidate") {
+        return "Deeper than a quick smoke, but still review duration before calling it sustained.";
+    }
+    return "Short validation smoke; useful for contract and device evidence, not a sustained thermal claim.";
+}
+
 TegrastatsSummary parse_tegrastats_log(const std::string& path) {
     TegrastatsSummary summary;
     if (path.empty()) {
@@ -286,6 +308,8 @@ RuntimeEvidence parse_runtime_evidence(const std::string& result_json_path) {
         extract_string_value(run_config, "tegrastats_log_path"),
         extract_string_value(jetson_evidence, "tegrastats_log_path"));
     evidence.timestamp = extract_string_value(json, "timestamp");
+    evidence.warmup = extract_int_value(run_config, "warmup");
+    evidence.runs = extract_int_value(run_config, "runs");
     evidence.mean_ms = extract_number_value(json, "mean_ms", extract_number_value(latency_ms, "mean"));
     evidence.p50_ms = extract_number_value(json, "p50_ms", extract_number_value(latency_ms, "p50"));
     evidence.p95_ms = extract_number_value(json, "p95_ms", extract_number_value(latency_ms, "p95"));
@@ -309,11 +333,14 @@ std::string runtime_summary_table(const RuntimeEvidence& evidence) {
         << "| precision | `" << display_or_unknown(evidence.precision) << "` |\n"
         << "| power_mode | `" << display_or_unknown(evidence.power_mode) << "` |\n"
         << "| jetson_clocks | `" << display_or_unknown(evidence.jetson_clocks) << "` |\n"
+        << "| warmup | " << evidence.warmup << " |\n"
+        << "| runs | " << evidence.runs << " |\n"
         << "| mean_ms | " << fmt(evidence.mean_ms) << " |\n"
         << "| p50_ms | " << fmt(evidence.p50_ms) << " |\n"
         << "| p95_ms | " << fmt(evidence.p95_ms) << " |\n"
         << "| p99_ms | " << fmt(evidence.p99_ms) << " |\n"
         << "| fps | " << fmt(evidence.fps_value) << " |\n"
+        << "| capture_depth | `" << capture_depth_label(evidence.runs, evidence.tegrastats.sample_count) << "` |\n"
         << "| timestamp | `" << display_or_unknown(evidence.timestamp) << "` |\n";
     return markdown.str();
 }
@@ -355,6 +382,15 @@ std::string metric_comparison_row(
     return row.str();
 }
 
+std::string depth_comparison_row(
+    const std::string& field,
+    const std::string& base,
+    const std::string& candidate) {
+    std::ostringstream row;
+    row << "| " << field << " | `" << base << "` | `" << candidate << "` |";
+    return row.str();
+}
+
 }  // namespace
 
 std::filesystem::path write_jetson_evidence_markdown_report(
@@ -377,6 +413,13 @@ std::filesystem::path write_jetson_evidence_markdown_report(
         << runtime_summary_table(evidence)
         << "\n## Tegrastats Summary\n\n"
         << tegrastats_summary_table(evidence.tegrastats, tegrastats_source)
+        << "\n## Evidence Depth\n\n"
+        << "| Field | Value |\n"
+        << "|---|---|\n"
+        << "| capture_depth | `" << capture_depth_label(evidence.runs, evidence.tegrastats.sample_count) << "` |\n"
+        << "| interpretation | " << capture_depth_note(capture_depth_label(evidence.runs, evidence.tegrastats.sample_count)) << " |\n"
+        << "| sustained_threshold | `runs >= 500` or `tegrastats samples >= 300` |\n"
+        << "| current_samples | " << evidence.tegrastats.sample_count << " |\n"
         << "\n## Lab Handoff\n\n"
         << "- Lab-compatible import path: `" << result_json_path << "`\n"
         << "- Runtime supplies execution evidence. InferEdgeLab owns comparison and deployment decision interpretation.\n";
@@ -417,6 +460,19 @@ std::filesystem::path write_power_mode_comparison_markdown_report(
         << metric_comparison_row("p95_ms", base.p95_ms, candidate.p95_ms, base_label, candidate_label) << "\n"
         << metric_comparison_row("p99_ms", base.p99_ms, candidate.p99_ms, base_label, candidate_label) << "\n"
         << metric_comparison_row("fps", base.fps_value, candidate.fps_value, base_label, candidate_label) << "\n\n"
+        << "## Run Depth Comparison\n\n"
+        << "| Field | " << base_label << " | " << candidate_label << " |\n"
+        << "|---|---|---|\n"
+        << depth_comparison_row("warmup", std::to_string(base.warmup), std::to_string(candidate.warmup)) << "\n"
+        << depth_comparison_row("runs", std::to_string(base.runs), std::to_string(candidate.runs)) << "\n"
+        << depth_comparison_row(
+            "tegrastats_sample_count",
+            std::to_string(base.tegrastats.sample_count),
+            std::to_string(candidate.tegrastats.sample_count)) << "\n"
+        << depth_comparison_row(
+            "capture_depth",
+            capture_depth_label(base.runs, base.tegrastats.sample_count),
+            capture_depth_label(candidate.runs, candidate.tegrastats.sample_count)) << "\n\n"
         << "## Tegrastats Comparison\n\n"
         << "| Metric | " << base_label << " | " << candidate_label << " | Delta | Delta % |\n"
         << "|---|---:|---:|---:|---:|\n"
@@ -426,6 +482,7 @@ std::filesystem::path write_power_mode_comparison_markdown_report(
         << metric_comparison_row("vdd_in_mw_max", base.tegrastats.vdd_in_mw_max, candidate.tegrastats.vdd_in_mw_max, base_label, candidate_label) << "\n\n"
         << "## Interpretation Notes\n\n"
         << "- Power mode changes are deployment validation evidence, not a same-run_config latency regression test.\n"
+        << "- `capture_depth=short_smoke` should not be described as a sustained thermal benchmark.\n"
         << "- Runtime exports evidence; InferEdgeLab owns comparison policy and deployment decision.\n"
         << "- TensorRT INT8 automatic calibration is outside this report scope.\n";
 
