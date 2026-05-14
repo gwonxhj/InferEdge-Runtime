@@ -136,6 +136,7 @@ These records are deployment validation evidence, not a production inference ser
 
 The 15W and 25W outputs include tegrastats-derived context and should be interpreted as different run configurations.
 InferEdgeLab owns comparison and deployment decision interpretation.
+Current committed Jetson snapshots are `short_smoke` evidence. The Markdown report path now records `capture_depth` so future 5-10 minute Jetson runs can be distinguished from quick contract/device smoke evidence without changing the Runtime JSON contract.
 
 ## Requirements
 
@@ -372,6 +373,7 @@ Jetson evidence can also be exported as Markdown for portfolio/review handoff:
 ```
 
 The Markdown reports summarize Runtime JSON and tegrastats evidence only. InferEdgeLab remains responsible for comparison policy and deployment decision interpretation.
+They also label evidence depth (`short_smoke`, `sustained_candidate`, or `sustained`) from Runtime run count and tegrastats sample count, preventing short Jetson smoke evidence from being overstated as sustained thermal validation.
 
 Committed report snapshots:
 

@@ -72,6 +72,8 @@ INFEREDGE_RUNTIME_RESULT_JSON="${OUTPUT_PATH}" python3 tests/test_lab_result_sch
 grep -q "InferEdge Runtime Jetson Evidence Summary" "${JETSON_REPORT_PATH}"
 grep -q "Lab-compatible import path" "${JETSON_REPORT_PATH}"
 grep -q "| sample_count | 2 |" "${JETSON_REPORT_PATH}"
+grep -q "capture_depth" "${JETSON_REPORT_PATH}"
+grep -q "short_smoke" "${JETSON_REPORT_PATH}"
 
 ./build/inferedge-runtime \
   --compare-power-modes \
@@ -82,6 +84,8 @@ grep -q "| sample_count | 2 |" "${JETSON_REPORT_PATH}"
 grep -q "InferEdge Runtime Jetson Power Mode Comparison" "${POWER_REPORT_PATH}"
 grep -q "25W" "${POWER_REPORT_PATH}"
 grep -q "15W" "${POWER_REPORT_PATH}"
+grep -q "Run Depth Comparison" "${POWER_REPORT_PATH}"
+grep -q "short_smoke" "${POWER_REPORT_PATH}"
 grep -q "TensorRT INT8 automatic calibration is outside this report scope" "${POWER_REPORT_PATH}"
 
 echo "[smoke_default] success"

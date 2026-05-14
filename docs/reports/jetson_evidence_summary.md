@@ -16,11 +16,14 @@ It is not a production inference server report or a TensorRT INT8 calibration wo
 | precision | `fp16` |
 | power_mode | `25W` |
 | jetson_clocks | `unknown` |
+| warmup | 10 |
+| runs | 50 |
 | mean_ms | 10.0664 |
 | p50_ms | 9.9086 |
 | p95_ms | 15.4766 |
 | p99_ms | 15.5484 |
 | fps | 99.3404 |
+| capture_depth | `short_smoke` |
 | timestamp | `2026-05-04T17:00:41Z` |
 
 ## Tegrastats Summary
@@ -37,6 +40,15 @@ It is not a production inference server report or a TensorRT INT8 calibration wo
 | max_temp_name | `gpu` |
 | vdd_in_mw_avg | 4863 |
 | vdd_in_mw_max | 5827 |
+
+## Evidence Depth
+
+| Field | Value |
+|---|---|
+| capture_depth | `short_smoke` |
+| interpretation | Short validation smoke; useful for contract and device evidence, not a sustained thermal claim. |
+| sustained_threshold | `runs >= 500` or `tegrastats samples >= 300` |
+| current_samples | 3 |
 
 ## Lab Handoff
 

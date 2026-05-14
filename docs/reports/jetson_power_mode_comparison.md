@@ -24,6 +24,15 @@ Different power modes are not treated as the same run_config regression test.
 | p99_ms | 15.5484 | 15.5292 | -0.0192 | -0.1236% |
 | fps | 99.3404 | 92.6003 | -6.7401 | -6.7849% |
 
+## Run Depth Comparison
+
+| Field | 25W | 15W |
+|---|---|---|
+| warmup | `10` | `10` |
+| runs | `50` | `50` |
+| tegrastats_sample_count | `3` | `10` |
+| capture_depth | `short_smoke` | `short_smoke` |
+
 ## Tegrastats Comparison
 
 | Metric | 25W | 15W | Delta | Delta % |
@@ -36,5 +45,6 @@ Different power modes are not treated as the same run_config regression test.
 ## Interpretation Notes
 
 - Power mode changes are deployment validation evidence, not a same-run_config latency regression test.
+- `capture_depth=short_smoke` should not be described as a sustained thermal benchmark.
 - Runtime exports evidence; InferEdgeLab owns comparison policy and deployment decision.
 - TensorRT INT8 automatic calibration is outside this report scope.
