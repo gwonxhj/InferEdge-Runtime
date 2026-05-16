@@ -1,0 +1,29 @@
+{
+  "schema_version": "inferedge-agent-manifest-v1",
+  "agent_id": "vision_detector",
+  "agent_type": "vision",
+  "priority": 90,
+  "latency_budget_ms": 33,
+  "deadline_ms": 40,
+  "input_type": "frame",
+  "output_type": "detections",
+  "required_backend": "onnxruntime",
+  "device_target": "cpu",
+  "precision": "fp32",
+  "runtime_artifact_path": "models/sample.onnx",
+  "fallback_policy": {
+    "mode": "drop_stale"
+  },
+  "telemetry_contract_version": "inferedge-agent-telemetry-v1",
+  "guard_policy": {
+    "policy_id": "vision_runtime_reliability_v1",
+    "required": false
+  },
+  "lab_compat": {
+    "source_manifest_path": "tests/fixtures/forge_handoff_manifest.json",
+    "runtime_artifact_path": "models/sample.onnx",
+    "required_backend": "onnxruntime",
+    "device_target": "cpu",
+    "precision": "fp32"
+  }
+}

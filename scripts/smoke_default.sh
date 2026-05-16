@@ -63,6 +63,37 @@ PY
 
 INFEREDGE_RUNTIME_RESULT_JSON="${OUTPUT_PATH}" python3 tests/test_lab_result_schema.py
 
+AGENT_OUTPUT_PATH="results/smoke_agent_result.json"
+./build/inferedge-runtime \
+  --agent-manifest tests/fixtures/agent_manifest.json \
+  --agent-task-id task_camera_frame_0001 \
+  --agent-queue-wait-ms 7 \
+  --agent-fallback-used \
+  --warmup 1 \
+  --runs 1 \
+  --output "${AGENT_OUTPUT_PATH}"
+
+python3 - <<'PY'
+import json
+from pathlib import Path
+
+data = json.loads(Path("results/smoke_agent_result.json").read_text())
+agent = data.get("agent")
+assert isinstance(agent, dict), data
+assert agent["schema_version"] == "inferedge-runtime-agent-task-v1"
+assert agent["source_contract"] == "inferedge-agent-manifest-v1"
+assert agent["agent_id"] == "vision_detector"
+assert agent["task_id"] == "task_camera_frame_0001"
+assert agent["agent_type"] == "vision"
+assert agent["scheduled_priority"] == 90
+assert agent["latency_budget_ms"] == 33
+assert agent["queue_wait_ms"] == 7
+assert agent["fallback_used"] is True
+assert data["extra"]["agent_manifest_recorded"] is True
+PY
+
+python3 tests/test_agent_runtime_result_contract.py
+
 ./build/inferedge-runtime \
   --report-jetson-evidence \
   --result-json tests/fixtures/jetson_tensorrt_25w_result.json \

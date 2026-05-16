@@ -27,6 +27,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_executable(inferedge-runtime
     src/main.cpp
+    src/agent_manifest.cpp
     src/cli.cpp
     src/engine.cpp
     src/jetson_report.cpp
