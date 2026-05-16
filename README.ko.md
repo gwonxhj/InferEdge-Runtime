@@ -12,6 +12,7 @@ C++ runtime execution and result export layer
 - 실제 Runtime 실행에서 latency statistics와 FPS를 기록합니다.
 - Lab compare/report/deployment decision 흐름에서 사용할 result JSON을 export합니다.
 - built artifact 실행 시 Forge manifest의 source model identity를 보존합니다.
+- Forge `agent_manifest.json` context를 optional `agent` result block으로 기록할 수 있습니다.
 
 ## InferEdge-Runtime의 차별점
 
@@ -43,6 +44,7 @@ InferEdgeEnv -> v0.1.5 v1-complete local-first run evidence registry / comparabi
 - C++ CLI로 inference/benchmark를 실행하고 Lab-compatible result JSON을 export합니다.
 - Forge `metadata.json` / `manifest.json` handoff를 읽고 Runtime 실행/provenance로 연결합니다.
 - Lab `worker_request` dry-run validation과 worker completed/failed response dry-run export를 제공합니다.
+- agent workload metadata를 기존 Runtime result schema를 깨지 않는 optional `agent` block으로 연결합니다.
 - Runtime은 production worker daemon이 아닙니다. 실제 queue/DB/worker orchestration은 future work입니다.
 
 ## 구현된 주요 기능
@@ -54,6 +56,7 @@ InferEdgeEnv -> v0.1.5 v1-complete local-first run evidence registry / comparabi
 - Jetson Evidence Track용 power mode / jetson_clocks / tegrastats summary context export
 - Lab-compatible result schema fixture/test
 - Forge manifest source model identity preservation
+- optional `agent_manifest.json` ingestion과 `agent_id` / `task_id` / priority / latency budget / fallback context export
 
 Identity preservation:
 
@@ -65,6 +68,33 @@ compare_key = yolov8n__b1__h640w640__fp32
 ```
 
 즉 TensorRT engine artifact 경로가 `model.engine`이어도, manifest가 제공하는 원본 모델 identity를 우선해 Lab compare readiness를 유지합니다.
+
+## Agent Runtime Result Context
+
+Runtime은 Forge `agent_manifest.json`을 선택적으로 읽어 기존 Lab-compatible result JSON에 `agent` block을 추가할 수 있습니다.
+
+이 기능은 reliable edge agent runtime 방향의 첫 Runtime-side contract입니다. `agent_id`, `task_id`, `agent_type`, priority, latency budget, queue wait, fallback usage, telemetry context를 기록하지만 기존 `result.json`의 top-level compare/report 필드는 변경하지 않습니다.
+
+예시:
+
+```bash
+./build/inferedge-runtime \
+  --agent-manifest tests/fixtures/agent_manifest.json \
+  --agent-task-id task_camera_frame_0001 \
+  --agent-queue-wait-ms 7 \
+  --agent-fallback-used \
+  --warmup 1 \
+  --runs 1 \
+  --output results/agent_runtime_result.json
+```
+
+계약 기준:
+
+- `agent` block은 optional입니다.
+- 기존 Runtime result는 `agent` block 없이도 계속 유효합니다.
+- `agent.schema_version`은 `inferedge-runtime-agent-task-v1`입니다.
+- Runtime은 task context를 기록할 뿐 scheduling/policy/deployment decision owner가 아닙니다.
+- 상세 계약은 [Agent Runtime Result Contract](docs/agent_runtime_result_contract.md)에 정리되어 있습니다.
 
 ## 빠른 실행
 

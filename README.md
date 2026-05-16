@@ -16,6 +16,7 @@ Language: English | [한국어](README.ko.md)
 - Measures latency statistics and FPS from real Runtime executions
 - Exports Lab-compatible result JSON for compare/report/deployment decision flows
 - Preserves Forge manifest source model identity when running built artifacts
+- Optionally records Forge `agent_manifest.json` context as an additive `agent` result block
 
 ## What Makes InferEdge-Runtime Different?
 
@@ -71,6 +72,7 @@ Implemented today:
 - manifest source model identity preservation for compare-ready TensorRT engine results
 - Lab `worker_request` dry-run validation
 - Lab worker completed/failed response dry-run export
+- optional `agent` result block for agent workload metadata without changing the base Runtime schema
 
 Planned later:
 
@@ -105,6 +107,7 @@ Portfolio boundary: InferEdgeLab is the validation / decision layer. InferEdgeEn
 - TensorRT one-shot dummy inference on Jetson linked builds
 - TensorRT benchmark runner on Jetson linked builds
 - Jetson Evidence Track fields for power mode, jetson_clocks, tegrastats summary, and Lab-compatible result import
+- optional Forge `agent_manifest.json` ingestion for `agent_id`, `task_id`, priority, latency budget, fallback, and telemetry context
 - documented benchmark measurement policy
 
 ## Current Limitations
@@ -118,6 +121,7 @@ Portfolio boundary: InferEdgeLab is the validation / decision layer. InferEdgeEn
 - OpenCV and CUDA are not linked in the default build
 - manifest parsing is limited to the sample Forge handoff schema
 - no full general-purpose JSON parser yet
+- `agent` task context is additive metadata only; scheduling/policy decisions remain outside Runtime
 - contract tests and smoke tests cover the current handoff/result schemas; broader backend integration tests remain future work
 - GitHub Actions currently runs default smoke test only
 - ORT linked smoke test remains local/manual because it requires external ONNX Runtime and model files
@@ -425,6 +429,7 @@ Main nested fields:
 - `timestamp`
 - `system`
 - `jetson_evidence`
+- `agent` (optional, emitted only when `--agent-manifest` is provided)
 - `model_metadata`
 - `extra`
 
@@ -441,6 +446,7 @@ The `extra` object includes:
 - `jetson_clocks`: optional `jetson_clocks` state
 - `tegrastats_log_path`: optional source log path for thermal/power evidence
 - `tegrastats_status`: `not_provided`, `parsed`, `unavailable`, or `no_samples`
+- `agent_manifest_recorded`: `true` when `--agent-manifest` was provided, otherwise `false`
 - `compare_ready`: currently `true`
 - `compare_key`
 - `backend_key`
@@ -472,6 +478,35 @@ Top-level compatibility fields:
 The schema regression fixture lives at `tests/fixtures/lab_compatible_result.json`, and `tests/test_lab_result_schema.py` validates both the fixture and smoke-generated Runtime JSON.
 
 See [examples/README.md](examples/README.md) for command examples and compact JSON field notes.
+
+## Agent Runtime Result Context
+
+Runtime can optionally read a Forge `agent_manifest.json` and append an additive `agent` block to the result JSON.
+
+This is the first bridge toward the reliable edge agent runtime direction. It records task metadata such as `agent_id`, `task_id`, `agent_type`, priority, latency budget, queue wait, fallback usage, and telemetry context while preserving the base Lab-compatible Runtime result schema.
+
+Example:
+
+```bash
+./build/inferedge-runtime \
+  --agent-manifest tests/fixtures/agent_manifest.json \
+  --agent-task-id task_camera_frame_0001 \
+  --agent-queue-wait-ms 7 \
+  --agent-fallback-used \
+  --warmup 1 \
+  --runs 1 \
+  --output results/agent_runtime_result.json
+```
+
+Contract notes:
+
+- `agent` is optional and absent from existing Runtime result files.
+- `agent.schema_version` is `inferedge-runtime-agent-task-v1`.
+- `agent.source_contract` is `inferedge-agent-manifest-v1`.
+- `agent.deadline_missed` is computed from mean latency and `latency_budget_ms` unless explicitly set with `--agent-deadline-missed`.
+- Runtime records task context only; scheduling/policy decisions remain Orchestrator/Lab responsibilities.
+
+See [docs/agent_runtime_result_contract.md](docs/agent_runtime_result_contract.md) for the full contract.
 
 ## Forge Handoff Input Preparation
 

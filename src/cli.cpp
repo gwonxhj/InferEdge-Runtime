@@ -1,5 +1,6 @@
 #include "inferedge_runtime/cli.hpp"
 
+#include "inferedge_runtime/agent_manifest.hpp"
 #include "inferedge_runtime/engine.hpp"
 #include "inferedge_runtime/jetson_report.hpp"
 #include "inferedge_runtime/lab_worker_request.hpp"
@@ -114,6 +115,12 @@ void print_help() {
         << "  --manifest <path>      Optional Forge/build manifest path used for default runtime config\n"
         << "  --forge-manifest <path> Alias for --manifest using Forge manifest.json handoff\n"
         << "  --forge-metadata <path> Optional Forge metadata.json handoff path used for default runtime config\n"
+        << "  --agent-manifest <path> Optional Forge agent_manifest.json used for agent task result context\n"
+        << "  --agent-task-id <id>   Optional task id recorded inside result.agent (default: task_<agent_id>)\n"
+        << "  --agent-queue-wait-ms <n> Optional queue wait in milliseconds recorded in result.agent\n"
+        << "  --agent-deadline-missed Mark the agent task as deadline missed in result.agent\n"
+        << "  --agent-fallback-used Mark fallback policy use in result.agent\n"
+        << "  --agent-execution-status <status> Optional agent execution status override\n"
         << "  --validate-forge-handoff Validate Forge handoff input and exit without execution\n"
         << "  --lab-worker-request <path> Optional Lab worker_request JSON for dry-run validation\n"
         << "  --validate-lab-worker-request Validate Lab worker_request input and exit without execution\n"
@@ -162,6 +169,19 @@ RuntimeConfig parse_args(int argc, char** argv) {
             config.forge_manifest_path = require_value(argc, argv, i, option);
         } else if (option == "--forge-metadata") {
             config.forge_metadata_path = require_value(argc, argv, i, option);
+        } else if (option == "--agent-manifest") {
+            config.agent_manifest_path = require_value(argc, argv, i, option);
+        } else if (option == "--agent-task-id") {
+            config.agent_task_id = require_value(argc, argv, i, option);
+        } else if (option == "--agent-queue-wait-ms") {
+            config.agent_queue_wait_ms = parse_int_with_minimum(require_value(argc, argv, i, option), option, 0);
+        } else if (option == "--agent-deadline-missed") {
+            config.agent_deadline_missed = true;
+            config.agent_deadline_missed_overridden = true;
+        } else if (option == "--agent-fallback-used") {
+            config.agent_fallback_used = true;
+        } else if (option == "--agent-execution-status") {
+            config.agent_execution_status = require_value(argc, argv, i, option);
         } else if (option == "--validate-forge-handoff") {
             config.validate_forge_handoff = true;
         } else if (option == "--lab-worker-request") {
@@ -295,6 +315,12 @@ RuntimeConfig parse_args(int argc, char** argv) {
     if (!config.manifest_path.empty()) {
         apply_manifest_defaults(config, manifest);
         config.manifest_applied = true;
+    }
+
+    if (!config.agent_manifest_path.empty()) {
+        const AgentManifestConfig agent_manifest = load_agent_manifest_config(config.agent_manifest_path);
+        apply_agent_manifest_defaults(config, agent_manifest);
+        config.agent_manifest_applied = true;
     }
 
     validate_engine(config.engine);
@@ -439,6 +465,8 @@ int run_cli(const RuntimeConfig& config) {
         << "InferEdgeRuntime benchmark configuration\n"
         << "  manifest: " << (config.manifest_path.empty() ? "none" : config.manifest_path) << '\n'
         << "  manifest_applied: " << (config.manifest_applied ? "true" : "false") << '\n'
+        << "  agent_manifest: " << (config.agent_manifest_path.empty() ? "none" : config.agent_manifest_path) << '\n'
+        << "  agent_manifest_applied: " << (config.agent_manifest_applied ? "true" : "false") << '\n'
         << "  model:  " << config.model_path << '\n'
         << "  input:  " << (config.input_path.empty() ? "none" : config.input_path) << '\n'
         << "  input_mode: " << config.input_mode() << '\n'

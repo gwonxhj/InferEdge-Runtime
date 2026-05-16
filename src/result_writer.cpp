@@ -259,6 +259,74 @@ void write_tegrastats_summary_json(std::ostream& output, const TegrastatsSummary
         << indent << "}";
 }
 
+bool should_mark_deadline_missed(const RuntimeConfig& config, const BenchmarkResult& benchmark_result) {
+    if (config.agent_deadline_missed_overridden) {
+        return config.agent_deadline_missed;
+    }
+    return benchmark_result.success &&
+           config.agent_latency_budget_ms > 0 &&
+           benchmark_result.mean_ms > static_cast<double>(config.agent_latency_budget_ms);
+}
+
+std::string agent_execution_status(const RuntimeConfig& config, const BenchmarkResult& benchmark_result) {
+    if (!config.agent_execution_status.empty()) {
+        return config.agent_execution_status;
+    }
+    return benchmark_result.status.empty() ? "unknown" : benchmark_result.status;
+}
+
+void write_agent_task_json(
+    std::ostream& output,
+    const RuntimeConfig& config,
+    const BenchmarkResult& benchmark_result,
+    int indent_spaces) {
+    const std::string indent(static_cast<std::size_t>(indent_spaces), ' ');
+    const bool deadline_missed = should_mark_deadline_missed(config, benchmark_result);
+
+    output
+        << "{\n"
+        << indent << "  \"schema_version\": \"inferedge-runtime-agent-task-v1\",\n"
+        << indent << "  \"source_contract\": \"inferedge-agent-manifest-v1\",\n"
+        << indent << "  \"manifest_path\": " << json_string(config.agent_manifest_path) << ",\n"
+        << indent << "  \"manifest_applied\": " << (config.agent_manifest_applied ? "true" : "false") << ",\n"
+        << indent << "  \"agent_id\": " << json_string(config.agent_id) << ",\n"
+        << indent << "  \"task_id\": " << json_string(config.agent_task_id) << ",\n"
+        << indent << "  \"agent_type\": " << json_string(config.agent_type) << ",\n"
+        << indent << "  \"input_type\": " << json_string(config.agent_input_type) << ",\n"
+        << indent << "  \"output_type\": " << json_string(config.agent_output_type) << ",\n"
+        << indent << "  \"scheduled_priority\": " << config.agent_scheduled_priority << ",\n"
+        << indent << "  \"latency_budget_ms\": " << config.agent_latency_budget_ms << ",\n"
+        << indent << "  \"deadline_ms\": " << config.agent_deadline_ms << ",\n"
+        << indent << "  \"deadline_missed\": " << (deadline_missed ? "true" : "false") << ",\n"
+        << indent << "  \"queue_wait_ms\": ";
+    if (config.agent_queue_wait_ms < 0) {
+        output << "null";
+    } else {
+        output << config.agent_queue_wait_ms;
+    }
+    output
+        << ",\n"
+        << indent << "  \"execution_status\": " << json_string(agent_execution_status(config, benchmark_result)) << ",\n"
+        << indent << "  \"fallback_used\": " << (config.agent_fallback_used ? "true" : "false") << ",\n"
+        << indent << "  \"fallback_policy\": {\n"
+        << indent << "    \"mode\": " << json_string(config.agent_fallback_policy_mode) << "\n"
+        << indent << "  },\n"
+        << indent << "  \"runtime_artifact_path\": " << json_string(config.agent_runtime_artifact_path) << ",\n"
+        << indent << "  \"required_backend\": " << json_string(config.agent_required_backend) << ",\n"
+        << indent << "  \"device_target\": " << json_string(config.agent_device_target) << ",\n"
+        << indent << "  \"precision\": " << json_string(config.agent_precision) << ",\n"
+        << indent << "  \"telemetry_contract_version\": " << json_string(config.agent_telemetry_contract_version) << ",\n"
+        << indent << "  \"telemetry_snapshot\": {\n"
+        << indent << "    \"latency_mean_ms\": " << benchmark_result.mean_ms << ",\n"
+        << indent << "    \"latency_p95_ms\": " << benchmark_result.p95_ms << ",\n"
+        << indent << "    \"latency_p99_ms\": " << benchmark_result.p99_ms << ",\n"
+        << indent << "    \"fps\": " << benchmark_result.fps << ",\n"
+        << indent << "    \"power_mode\": " << json_string(config.power_mode) << ",\n"
+        << indent << "    \"jetson_clocks\": " << json_string(config.jetson_clocks) << "\n"
+        << indent << "  }\n"
+        << indent << "}";
+}
+
 void write_shape_json(std::ostream& output, const std::vector<int64_t>& shape) {
     output << '[';
     for (std::size_t i = 0; i < shape.size(); ++i) {
@@ -436,7 +504,15 @@ std::filesystem::path write_result_json(
     write_tegrastats_summary_json(output, tegrastats_summary, 4);
     output
         << "\n"
-        << "  },\n"
+        << "  }";
+    if (!config.agent_manifest_path.empty()) {
+        output
+            << ",\n"
+            << "  \"agent\": ";
+        write_agent_task_json(output, config, benchmark_result, 2);
+    }
+    output
+        << ",\n"
         << "  \"model_metadata\": {\n"
         << "    \"inputs\": ";
     write_tensor_metadata_json(output, model_metadata.inputs, 4);
@@ -467,6 +543,15 @@ std::filesystem::path write_result_json(
         << "    \"jetson_clocks\": " << json_string(config.jetson_clocks) << ",\n"
         << "    \"tegrastats_log_path\": " << json_string(config.tegrastats_log_path) << ",\n"
         << "    \"tegrastats_status\": " << json_string(tegrastats_summary.status) << ",\n"
+        << "    \"agent_manifest_recorded\": " << (config.agent_manifest_path.empty() ? "false" : "true") << ",\n";
+    if (!config.agent_manifest_path.empty()) {
+        output
+            << "    \"agent_manifest_path\": " << json_string(config.agent_manifest_path) << ",\n"
+            << "    \"agent_id\": " << json_string(config.agent_id) << ",\n"
+            << "    \"agent_task_id\": " << json_string(config.agent_task_id) << ",\n"
+            << "    \"agent_type\": " << json_string(config.agent_type) << ",\n";
+    }
+    output
         << "    \"compare_ready\": true,\n"
         << "    \"compare_key\": " << json_string(compare_key) << ",\n"
         << "    \"backend_key\": " << json_string(backend_key) << ",\n"
