@@ -145,6 +145,11 @@ def validate_optional_runtime_operation_evidence(result: dict) -> None:
         for field in ("success", "run_once", "timeout_observed"):
             if not isinstance(health.get(field), bool):
                 raise AssertionError(f"runtime_health_snapshot.{field} must be a boolean")
+        timeout_budget = health.get("timeout_budget_ms")
+        if timeout_budget is not None and (
+            isinstance(timeout_budget, bool) or not isinstance(timeout_budget, int)
+        ):
+            raise AssertionError("runtime_health_snapshot.timeout_budget_ms must be an integer or null")
 
     error = result.get("runtime_error_classification")
     if error is not None:

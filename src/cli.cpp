@@ -145,6 +145,7 @@ void print_help() {
         << "  --width <n>            Dummy input width, n >= 1 (default: 224)\n"
         << "  --warmup <n>           Number of warmup runs, n >= 0 (default: 5)\n"
         << "  --runs <n>             Number of benchmark runs, n >= 1 (default: 50)\n"
+        << "  --timeout-ms <n>       Optional latency timeout observation threshold, n >= 1\n"
         << "  --run-once             Run one inference without benchmark timing\n"
         << "  --output <path|auto>   Output result path or auto-generated results filename (default: results/runtime_result.json)\n";
 }
@@ -244,6 +245,8 @@ RuntimeConfig parse_args(int argc, char** argv) {
             config.warmup = parse_int_with_minimum(require_value(argc, argv, i, option), option, 0);
         } else if (option == "--runs") {
             config.runs = parse_int_with_minimum(require_value(argc, argv, i, option), option, 1);
+        } else if (option == "--timeout-ms") {
+            config.timeout_ms = parse_int_with_minimum(require_value(argc, argv, i, option), option, 1);
         } else if (option == "--run-once") {
             config.run_once = true;
         } else if (option == "--output") {
@@ -480,6 +483,7 @@ int run_cli(const RuntimeConfig& config) {
         << "  width:  " << config.width << '\n'
         << "  warmup: " << config.warmup << '\n'
         << "  runs:   " << config.runs << '\n'
+        << "  timeout_ms: " << (config.timeout_ms > 0 ? std::to_string(config.timeout_ms) : "not_configured") << '\n'
         << "  run_once: " << (config.run_once ? "true" : "false") << '\n'
         << "  output: " << config.output_path << '\n'
         << "\n"

@@ -52,6 +52,7 @@ struct RuntimeConfig {
     int agent_latency_budget_ms = 0;
     int agent_deadline_ms = 0;
     int agent_queue_wait_ms = -1;
+    int timeout_ms = 0;
     int warmup = 5;
     int runs = 50;
     std::string output_path = "results/runtime_result.json";

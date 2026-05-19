@@ -327,7 +327,16 @@ void write_agent_task_json(
         << indent << "}";
 }
 
-std::string runtime_health_status(const BenchmarkResult& benchmark_result) {
+bool timeout_observed(const RuntimeConfig& config, const BenchmarkResult& benchmark_result) {
+    return config.timeout_ms > 0 &&
+           benchmark_result.success &&
+           benchmark_result.mean_ms > static_cast<double>(config.timeout_ms);
+}
+
+std::string runtime_health_status(const RuntimeConfig& config, const BenchmarkResult& benchmark_result) {
+    if (timeout_observed(config, benchmark_result)) {
+        return "degraded";
+    }
     if (benchmark_result.success) {
         return "ok";
     }
@@ -337,7 +346,10 @@ std::string runtime_health_status(const BenchmarkResult& benchmark_result) {
     return "error";
 }
 
-std::string runtime_error_category(const BenchmarkResult& benchmark_result) {
+std::string runtime_error_category(const RuntimeConfig& config, const BenchmarkResult& benchmark_result) {
+    if (timeout_observed(config, benchmark_result)) {
+        return "runtime_timeout_observed";
+    }
     if (benchmark_result.success) {
         return "none";
     }
@@ -357,10 +369,11 @@ void write_runtime_health_snapshot_json(
     const BenchmarkResult& benchmark_result,
     int indent_spaces) {
     const std::string indent(static_cast<std::size_t>(indent_spaces), ' ');
+    const bool observed_timeout = timeout_observed(config, benchmark_result);
     output
         << "{\n"
         << indent << "  \"schema_version\": \"inferedge-runtime-health-v1\",\n"
-        << indent << "  \"status\": " << json_string(runtime_health_status(benchmark_result)) << ",\n"
+        << indent << "  \"status\": " << json_string(runtime_health_status(config, benchmark_result)) << ",\n"
         << indent << "  \"engine_backend\": " << json_string(engine_metadata.backend) << ",\n"
         << indent << "  \"device\": " << json_string(config.device) << ",\n"
         << indent << "  \"input_mode\": " << json_string(config.input_mode()) << ",\n"
@@ -375,24 +388,36 @@ void write_runtime_health_snapshot_json(
         << indent << "  \"fps\": " << benchmark_result.fps << ",\n"
         << indent << "  \"power_mode\": " << json_string(config.power_mode) << ",\n"
         << indent << "  \"jetson_clocks\": " << json_string(config.jetson_clocks) << ",\n"
-        << indent << "  \"timeout_policy\": \"not_configured\",\n"
-        << indent << "  \"timeout_observed\": false\n"
+        << indent << "  \"timeout_policy\": "
+        << json_string(config.timeout_ms > 0 ? "latency_threshold" : "not_configured") << ",\n"
+        << indent << "  \"timeout_budget_ms\": ";
+    if (config.timeout_ms > 0) {
+        output << config.timeout_ms;
+    } else {
+        output << "null";
+    }
+    output
+        << ",\n"
+        << indent << "  \"timeout_observed\": " << (observed_timeout ? "true" : "false") << "\n"
         << indent << "}";
 }
 
 void write_runtime_error_classification_json(
     std::ostream& output,
+    const RuntimeConfig& config,
     const BenchmarkResult& benchmark_result,
     int indent_spaces) {
     const std::string indent(static_cast<std::size_t>(indent_spaces), ' ');
+    const bool observed_timeout = timeout_observed(config, benchmark_result);
     output
         << "{\n"
         << indent << "  \"schema_version\": \"inferedge-runtime-error-v1\",\n"
-        << indent << "  \"status\": " << json_string(benchmark_result.success ? "none" : "classified") << ",\n"
-        << indent << "  \"category\": " << json_string(runtime_error_category(benchmark_result)) << ",\n"
-        << indent << "  \"message\": " << json_string(benchmark_result.success ? "" : benchmark_result.message) << ",\n"
-        << indent << "  \"timeout_observed\": false,\n"
-        << indent << "  \"retryable\": false\n"
+        << indent << "  \"status\": " << json_string((benchmark_result.success && !observed_timeout) ? "none" : "classified") << ",\n"
+        << indent << "  \"category\": " << json_string(runtime_error_category(config, benchmark_result)) << ",\n"
+        << indent << "  \"message\": "
+        << json_string(observed_timeout ? "mean latency exceeded configured timeout threshold" : (benchmark_result.success ? "" : benchmark_result.message)) << ",\n"
+        << indent << "  \"timeout_observed\": " << (observed_timeout ? "true" : "false") << ",\n"
+        << indent << "  \"retryable\": " << (observed_timeout ? "true" : "false") << "\n"
         << indent << "}";
 }
 
@@ -405,6 +430,7 @@ void write_runtime_events_json(
     int indent_spaces) {
     const std::string indent(static_cast<std::size_t>(indent_spaces), ' ');
     const std::string item_indent(static_cast<std::size_t>(indent_spaces + 2), ' ');
+    const bool observed_timeout = timeout_observed(config, benchmark_result);
 
     output
         << "[\n"
@@ -425,8 +451,11 @@ void write_runtime_events_json(
         << item_indent << "},\n"
         << item_indent << "{\n"
         << item_indent << "  \"type\": \"runtime_error_classified\",\n"
-        << item_indent << "  \"status\": " << json_string(benchmark_result.success ? "none" : "classified") << ",\n"
-        << item_indent << "  \"category\": " << json_string(runtime_error_category(benchmark_result)) << "\n"
+        << item_indent << "  \"status\": " << json_string((benchmark_result.success && !observed_timeout) ? "none" : "classified") << ",\n"
+        << item_indent << "  \"category\": " << json_string(runtime_error_category(config, benchmark_result)) << ",\n"
+        << item_indent << "  \"timeout_policy\": "
+        << json_string(config.timeout_ms > 0 ? "latency_threshold" : "not_configured") << ",\n"
+        << item_indent << "  \"timeout_observed\": " << (observed_timeout ? "true" : "false") << "\n"
         << item_indent << "},\n";
 
     if (!config.agent_manifest_path.empty()) {
@@ -580,6 +609,14 @@ std::filesystem::path write_result_json(
         << "    \"width\": " << config.width << ",\n"
         << "    \"warmup\": " << config.warmup << ",\n"
         << "    \"runs\": " << config.runs << ",\n"
+        << "    \"timeout_ms\": ";
+    if (config.timeout_ms > 0) {
+        output << config.timeout_ms;
+    } else {
+        output << "null";
+    }
+    output
+        << ",\n"
         << "    \"power_mode\": " << json_string(config.power_mode) << ",\n"
         << "    \"jetson_clocks\": " << json_string(config.jetson_clocks) << ",\n"
         << "    \"tegrastats_log_path\": " << json_string(config.tegrastats_log_path) << ",\n"
@@ -631,7 +668,7 @@ std::filesystem::path write_result_json(
     output
         << ",\n"
         << "  \"runtime_error_classification\": ";
-    write_runtime_error_classification_json(output, benchmark_result, 2);
+    write_runtime_error_classification_json(output, config, benchmark_result, 2);
     output
         << ",\n"
         << "  \"runtime_events\": ";

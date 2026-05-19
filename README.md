@@ -487,7 +487,7 @@ This is the first bridge toward the reliable edge agent runtime direction. It re
 
 Runtime result JSON also includes additive operation evidence blocks:
 
-- `runtime_health_snapshot`: execution health, backend/device context, run count, latency/FPS summary, and explicit timeout observation status.
+- `runtime_health_snapshot`: execution health, backend/device context, run count, latency/FPS summary, and explicit timeout observation status. `--timeout-ms` records an observation threshold; it does not claim production request cancellation.
 - `runtime_error_classification`: structured success/error category for downstream report context.
 - `runtime_events`: compact lifecycle event log for configuration, benchmark completion, error classification, optional agent context, and tegrastats parsing.
 
@@ -501,6 +501,7 @@ Example:
   --agent-task-id task_camera_frame_0001 \
   --agent-queue-wait-ms 7 \
   --agent-fallback-used \
+  --timeout-ms 1 \
   --warmup 1 \
   --runs 1 \
   --output results/agent_runtime_result.json
