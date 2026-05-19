@@ -493,6 +493,12 @@ Runtime result JSON also includes additive operation evidence blocks:
 
 These fields are evidence for Orchestrator/Lab analysis. Runtime still does not schedule tasks or own deployment decisions.
 
+The committed fixture
+`tests/fixtures/runtime_timeout_observed_result.json` shows the handoff case
+where a benchmark succeeds but crosses the configured latency observation
+threshold. InferEdgeLab can treat that Runtime evidence as `review_required`
+context while keeping Runtime as the evidence exporter.
+
 Example:
 
 ```bash

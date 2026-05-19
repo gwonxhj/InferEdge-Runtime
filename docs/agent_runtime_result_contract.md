@@ -44,6 +44,24 @@ Relevant options:
 | `--agent-execution-status <status>` | Overrides the agent execution status recorded in `agent.execution_status`. |
 | `--timeout-ms <n>` | Records a latency timeout observation threshold in Runtime health/error evidence. This is not production request cancellation. |
 
+Committed observation fixture:
+
+- `tests/fixtures/runtime_timeout_observed_result.json`
+
+This fixture shows the downstream Lab/AIGuard handoff case where Runtime
+completed a benchmark, but mean latency crossed the configured observation
+threshold. It records:
+
+- `runtime_health_snapshot.timeout_policy: "latency_threshold"`
+- `runtime_health_snapshot.timeout_budget_ms: 10`
+- `runtime_health_snapshot.timeout_observed: true`
+- `runtime_error_classification.category: "runtime_timeout_observed"`
+- `runtime_error_classification.retryable: true`
+
+Lab treats this as deployment review evidence. Runtime still only records the
+observation; it does not cancel production requests or make deployment
+decisions.
+
 ## Result JSON Shape
 
 When `--agent-manifest` is not provided, no top-level `agent` block is emitted.

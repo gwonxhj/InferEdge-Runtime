@@ -34,6 +34,20 @@ class LabCompatibleRuntimeResultSchemaTest(unittest.TestCase):
 
         validate_lab_compatible_result(result)
 
+    def test_timeout_observed_fixture_satisfies_lab_compatible_schema(self):
+        path = ROOT / "tests" / "fixtures" / "runtime_timeout_observed_result.json"
+        result = load_json(path)
+
+        validate_lab_compatible_result(result)
+        health = result["runtime_health_snapshot"]
+        self.assertEqual(health["timeout_policy"], "latency_threshold")
+        self.assertEqual(health["timeout_budget_ms"], 10)
+        self.assertTrue(health["timeout_observed"])
+        error = result["runtime_error_classification"]
+        self.assertEqual(error["category"], "runtime_timeout_observed")
+        self.assertTrue(error["timeout_observed"])
+        self.assertTrue(error["retryable"])
+
     def test_runtime_output_satisfies_lab_compatible_schema_when_provided(self):
         result_env = os.environ.get("INFEREDGE_RUNTIME_RESULT_JSON")
         if not result_env:
