@@ -327,6 +327,127 @@ void write_agent_task_json(
         << indent << "}";
 }
 
+std::string runtime_health_status(const BenchmarkResult& benchmark_result) {
+    if (benchmark_result.success) {
+        return "ok";
+    }
+    if (benchmark_result.status == "skipped") {
+        return "degraded";
+    }
+    return "error";
+}
+
+std::string runtime_error_category(const BenchmarkResult& benchmark_result) {
+    if (benchmark_result.success) {
+        return "none";
+    }
+    if (benchmark_result.status == "skipped") {
+        return "runtime_execution_skipped";
+    }
+    if (!benchmark_result.status.empty()) {
+        return "runtime_" + sanitize_filename_component(benchmark_result.status);
+    }
+    return "runtime_error";
+}
+
+void write_runtime_health_snapshot_json(
+    std::ostream& output,
+    const RuntimeConfig& config,
+    const EngineMetadata& engine_metadata,
+    const BenchmarkResult& benchmark_result,
+    int indent_spaces) {
+    const std::string indent(static_cast<std::size_t>(indent_spaces), ' ');
+    output
+        << "{\n"
+        << indent << "  \"schema_version\": \"inferedge-runtime-health-v1\",\n"
+        << indent << "  \"status\": " << json_string(runtime_health_status(benchmark_result)) << ",\n"
+        << indent << "  \"engine_backend\": " << json_string(engine_metadata.backend) << ",\n"
+        << indent << "  \"device\": " << json_string(config.device) << ",\n"
+        << indent << "  \"input_mode\": " << json_string(config.input_mode()) << ",\n"
+        << indent << "  \"input_preprocess\": " << json_string(config.input_preprocess()) << ",\n"
+        << indent << "  \"warmup\": " << config.warmup << ",\n"
+        << indent << "  \"runs\": " << config.runs << ",\n"
+        << indent << "  \"run_once\": " << (config.run_once ? "true" : "false") << ",\n"
+        << indent << "  \"success\": " << (benchmark_result.success ? "true" : "false") << ",\n"
+        << indent << "  \"latency_mean_ms\": " << benchmark_result.mean_ms << ",\n"
+        << indent << "  \"latency_p95_ms\": " << benchmark_result.p95_ms << ",\n"
+        << indent << "  \"latency_p99_ms\": " << benchmark_result.p99_ms << ",\n"
+        << indent << "  \"fps\": " << benchmark_result.fps << ",\n"
+        << indent << "  \"power_mode\": " << json_string(config.power_mode) << ",\n"
+        << indent << "  \"jetson_clocks\": " << json_string(config.jetson_clocks) << ",\n"
+        << indent << "  \"timeout_policy\": \"not_configured\",\n"
+        << indent << "  \"timeout_observed\": false\n"
+        << indent << "}";
+}
+
+void write_runtime_error_classification_json(
+    std::ostream& output,
+    const BenchmarkResult& benchmark_result,
+    int indent_spaces) {
+    const std::string indent(static_cast<std::size_t>(indent_spaces), ' ');
+    output
+        << "{\n"
+        << indent << "  \"schema_version\": \"inferedge-runtime-error-v1\",\n"
+        << indent << "  \"status\": " << json_string(benchmark_result.success ? "none" : "classified") << ",\n"
+        << indent << "  \"category\": " << json_string(runtime_error_category(benchmark_result)) << ",\n"
+        << indent << "  \"message\": " << json_string(benchmark_result.success ? "" : benchmark_result.message) << ",\n"
+        << indent << "  \"timeout_observed\": false,\n"
+        << indent << "  \"retryable\": false\n"
+        << indent << "}";
+}
+
+void write_runtime_events_json(
+    std::ostream& output,
+    const RuntimeConfig& config,
+    const EngineMetadata& engine_metadata,
+    const BenchmarkResult& benchmark_result,
+    const TegrastatsSummary& tegrastats_summary,
+    int indent_spaces) {
+    const std::string indent(static_cast<std::size_t>(indent_spaces), ' ');
+    const std::string item_indent(static_cast<std::size_t>(indent_spaces + 2), ' ');
+
+    output
+        << "[\n"
+        << item_indent << "{\n"
+        << item_indent << "  \"type\": \"runtime_configured\",\n"
+        << item_indent << "  \"status\": \"ok\",\n"
+        << item_indent << "  \"engine_backend\": " << json_string(engine_metadata.backend) << ",\n"
+        << item_indent << "  \"device\": " << json_string(config.device) << ",\n"
+        << item_indent << "  \"input_mode\": " << json_string(config.input_mode()) << "\n"
+        << item_indent << "},\n"
+        << item_indent << "{\n"
+        << item_indent << "  \"type\": \"benchmark_completed\",\n"
+        << item_indent << "  \"status\": " << json_string(benchmark_result.status) << ",\n"
+        << item_indent << "  \"success\": " << (benchmark_result.success ? "true" : "false") << ",\n"
+        << item_indent << "  \"warmup\": " << benchmark_result.warmup_runs << ",\n"
+        << item_indent << "  \"runs\": " << benchmark_result.timed_runs << ",\n"
+        << item_indent << "  \"mean_ms\": " << benchmark_result.mean_ms << "\n"
+        << item_indent << "},\n"
+        << item_indent << "{\n"
+        << item_indent << "  \"type\": \"runtime_error_classified\",\n"
+        << item_indent << "  \"status\": " << json_string(benchmark_result.success ? "none" : "classified") << ",\n"
+        << item_indent << "  \"category\": " << json_string(runtime_error_category(benchmark_result)) << "\n"
+        << item_indent << "},\n";
+
+    if (!config.agent_manifest_path.empty()) {
+        output
+            << item_indent << "{\n"
+            << item_indent << "  \"type\": \"agent_context_recorded\",\n"
+            << item_indent << "  \"status\": " << json_string(config.agent_manifest_applied ? "ok" : "provided") << ",\n"
+            << item_indent << "  \"agent_id\": " << json_string(config.agent_id) << ",\n"
+            << item_indent << "  \"task_id\": " << json_string(config.agent_task_id) << "\n"
+            << item_indent << "},\n";
+    }
+
+    output
+        << item_indent << "{\n"
+        << item_indent << "  \"type\": \"tegrastats_summary\",\n"
+        << item_indent << "  \"status\": " << json_string(tegrastats_summary.status) << ",\n"
+        << item_indent << "  \"sample_count\": " << tegrastats_summary.sample_count << "\n"
+        << item_indent << "}\n"
+        << indent << "]";
+}
+
 void write_shape_json(std::ostream& output, const std::vector<int64_t>& shape) {
     output << '[';
     for (std::size_t i = 0; i < shape.size(); ++i) {
@@ -504,7 +625,17 @@ std::filesystem::path write_result_json(
     write_tegrastats_summary_json(output, tegrastats_summary, 4);
     output
         << "\n"
-        << "  }";
+        << "  },\n"
+        << "  \"runtime_health_snapshot\": ";
+    write_runtime_health_snapshot_json(output, config, engine_metadata, benchmark_result, 2);
+    output
+        << ",\n"
+        << "  \"runtime_error_classification\": ";
+    write_runtime_error_classification_json(output, benchmark_result, 2);
+    output
+        << ",\n"
+        << "  \"runtime_events\": ";
+    write_runtime_events_json(output, config, engine_metadata, benchmark_result, tegrastats_summary, 2);
     if (!config.agent_manifest_path.empty()) {
         output
             << ",\n"

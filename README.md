@@ -485,6 +485,14 @@ Runtime can optionally read a Forge `agent_manifest.json` and append an additive
 
 This is the first bridge toward the reliable edge agent runtime direction. It records task metadata such as `agent_id`, `task_id`, `agent_type`, priority, latency budget, queue wait, fallback usage, and telemetry context while preserving the base Lab-compatible Runtime result schema.
 
+Runtime result JSON also includes additive operation evidence blocks:
+
+- `runtime_health_snapshot`: execution health, backend/device context, run count, latency/FPS summary, and explicit timeout observation status.
+- `runtime_error_classification`: structured success/error category for downstream report context.
+- `runtime_events`: compact lifecycle event log for configuration, benchmark completion, error classification, optional agent context, and tegrastats parsing.
+
+These fields are evidence for Orchestrator/Lab analysis. Runtime still does not schedule tasks or own deployment decisions.
+
 Example:
 
 ```bash

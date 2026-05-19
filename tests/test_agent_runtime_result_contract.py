@@ -77,6 +77,30 @@ class AgentRuntimeResultContractTest(unittest.TestCase):
         self.assertEqual(agent["telemetry_contract_version"], "inferedge-agent-telemetry-v1")
         self.assertEqual(agent["telemetry_snapshot"]["power_mode"], "unknown")
 
+        health = result["runtime_health_snapshot"]
+        self.assertEqual(health["schema_version"], "inferedge-runtime-health-v1")
+        self.assertIn(health["status"], {"ok", "degraded", "error"})
+        self.assertEqual(health["engine_backend"], "onnxruntime")
+        self.assertEqual(health["device"], "cpu")
+        self.assertFalse(health["timeout_observed"])
+
+        error = result["runtime_error_classification"]
+        self.assertEqual(error["schema_version"], "inferedge-runtime-error-v1")
+        if result["success"]:
+            self.assertEqual(error["status"], "none")
+            self.assertEqual(error["category"], "none")
+        else:
+            self.assertEqual(error["status"], "classified")
+            self.assertNotEqual(error["category"], "none")
+
+        runtime_events = result["runtime_events"]
+        self.assertIsInstance(runtime_events, list)
+        event_types = {event["type"] for event in runtime_events}
+        self.assertIn("runtime_configured", event_types)
+        self.assertIn("benchmark_completed", event_types)
+        self.assertIn("runtime_error_classified", event_types)
+        self.assertIn("agent_context_recorded", event_types)
+
         extra = result["extra"]
         self.assertTrue(extra["agent_manifest_recorded"])
         self.assertEqual(extra["agent_id"], "vision_detector")
