@@ -4,6 +4,14 @@ InferEdge-Runtime can attach optional agent task context to the existing Lab-com
 
 This contract is intentionally additive. Existing Runtime results remain valid without an `agent` block, and Lab-compatible top-level fields such as `compare_key`, `backend_key`, `run_config`, `latency_ms`, `jetson_evidence`, and `extra` must not change shape.
 
+Runtime may also append additive operation evidence blocks:
+
+- `runtime_health_snapshot`
+- `runtime_error_classification`
+- `runtime_events`
+
+These blocks support downstream runtime operation reporting without turning Runtime into a scheduler or deployment decision owner.
+
 ## Scope
 
 The agent result block is the Runtime-side bridge from Forge `agent_manifest.json` to later Orchestrator, AIGuard, and Lab agent workflow analysis.
@@ -45,6 +53,51 @@ When provided, Runtime appends:
   "schema_version": "inferedge-runtime-result-v1",
   "compare_key": "yolov8n__b1__h224w224__fp32",
   "backend_key": "onnxruntime__cpu",
+  "runtime_health_snapshot": {
+    "schema_version": "inferedge-runtime-health-v1",
+    "status": "ok",
+    "engine_backend": "onnxruntime",
+    "device": "cpu",
+    "input_mode": "synthetic",
+    "input_preprocess": "synthetic",
+    "warmup": 1,
+    "runs": 1,
+    "run_once": false,
+    "success": true,
+    "latency_mean_ms": 0.0,
+    "latency_p95_ms": 0.0,
+    "latency_p99_ms": 0.0,
+    "fps": 0.0,
+    "power_mode": "unknown",
+    "jetson_clocks": "unknown",
+    "timeout_policy": "not_configured",
+    "timeout_observed": false
+  },
+  "runtime_error_classification": {
+    "schema_version": "inferedge-runtime-error-v1",
+    "status": "none",
+    "category": "none",
+    "message": "",
+    "timeout_observed": false,
+    "retryable": false
+  },
+  "runtime_events": [
+    {
+      "type": "runtime_configured",
+      "status": "ok",
+      "engine_backend": "onnxruntime",
+      "device": "cpu",
+      "input_mode": "synthetic"
+    },
+    {
+      "type": "benchmark_completed",
+      "status": "success",
+      "success": true,
+      "warmup": 1,
+      "runs": 1,
+      "mean_ms": 0.0
+    }
+  ],
   "agent": {
     "schema_version": "inferedge-runtime-agent-task-v1",
     "source_contract": "inferedge-agent-manifest-v1",
@@ -105,6 +158,8 @@ When provided, Runtime appends:
 - `agent.deadline_missed` is computed from mean latency and `latency_budget_ms` when possible, unless explicitly overridden by `--agent-deadline-missed`.
 - `queue_wait_ms` is `null` unless supplied.
 - `execution_status` defaults to the Runtime benchmark status unless overridden.
+- `runtime_health_snapshot`, `runtime_error_classification`, and `runtime_events` are additive and safe for existing consumers to ignore.
+- Runtime does not claim timeout detection unless a timeout mechanism is explicitly implemented; current results record `timeout_policy: not_configured` and `timeout_observed: false`.
 
 ## Current Boundary
 

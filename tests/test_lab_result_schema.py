@@ -126,6 +126,55 @@ def validate_lab_compatible_result(result: dict) -> None:
     if result.get("backend_key") is not None and not isinstance(result["backend_key"], str):
         raise AssertionError("backend_key must be a string when present")
 
+    validate_optional_runtime_operation_evidence(result)
+
+
+def validate_optional_runtime_operation_evidence(result: dict) -> None:
+    health = result.get("runtime_health_snapshot")
+    if health is not None:
+        if not isinstance(health, dict):
+            raise AssertionError("runtime_health_snapshot must be an object when present")
+        for field in ("schema_version", "status", "engine_backend", "device", "input_mode"):
+            if field not in health:
+                raise AssertionError(f"runtime_health_snapshot.{field} is required")
+            if not isinstance(health[field], str):
+                raise AssertionError(f"runtime_health_snapshot.{field} must be a string")
+        for field in ("warmup", "runs"):
+            if not isinstance(health.get(field), int):
+                raise AssertionError(f"runtime_health_snapshot.{field} must be an integer")
+        for field in ("success", "run_once", "timeout_observed"):
+            if not isinstance(health.get(field), bool):
+                raise AssertionError(f"runtime_health_snapshot.{field} must be a boolean")
+
+    error = result.get("runtime_error_classification")
+    if error is not None:
+        if not isinstance(error, dict):
+            raise AssertionError("runtime_error_classification must be an object when present")
+        for field in ("schema_version", "status", "category", "message"):
+            if field not in error:
+                raise AssertionError(f"runtime_error_classification.{field} is required")
+            if not isinstance(error[field], str):
+                raise AssertionError(f"runtime_error_classification.{field} must be a string")
+        for field in ("timeout_observed", "retryable"):
+            if not isinstance(error.get(field), bool):
+                raise AssertionError(f"runtime_error_classification.{field} must be a boolean")
+
+    events = result.get("runtime_events")
+    if events is not None:
+        if not isinstance(events, list):
+            raise AssertionError("runtime_events must be an array when present")
+        event_types = []
+        for event in events:
+            if not isinstance(event, dict):
+                raise AssertionError("runtime_events items must be objects")
+            event_type = event.get("type")
+            if not isinstance(event_type, str) or not event_type:
+                raise AssertionError("runtime_events[].type must be a non-empty string")
+            event_types.append(event_type)
+        for expected in ("runtime_configured", "benchmark_completed", "runtime_error_classified"):
+            if expected not in event_types:
+                raise AssertionError(f"runtime_events must include {expected}")
+
 
 class JetsonEvidenceContractTest(unittest.TestCase):
     def test_runtime_binary_parses_tegrastats_log_when_available(self):
@@ -167,6 +216,15 @@ class JetsonEvidenceContractTest(unittest.TestCase):
             result = load_json(output_path)
 
         validate_lab_compatible_result(result)
+        self.assertEqual(result["runtime_health_snapshot"]["schema_version"], "inferedge-runtime-health-v1")
+        self.assertIn(result["runtime_health_snapshot"]["status"], {"ok", "degraded", "error"})
+        if result["success"]:
+            self.assertEqual(result["runtime_error_classification"]["category"], "none")
+        else:
+            self.assertNotEqual(result["runtime_error_classification"]["category"], "none")
+        event_types = {event["type"] for event in result["runtime_events"]}
+        self.assertIn("runtime_configured", event_types)
+        self.assertIn("benchmark_completed", event_types)
         self.assertEqual(result["run_config"]["power_mode"], "15W")
         self.assertEqual(result["run_config"]["jetson_clocks"], "on")
         summary = result["jetson_evidence"]["tegrastats_summary"]
