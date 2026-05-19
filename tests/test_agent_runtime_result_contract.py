@@ -43,6 +43,8 @@ class AgentRuntimeResultContractTest(unittest.TestCase):
                     "--agent-queue-wait-ms",
                     "7",
                     "--agent-fallback-used",
+                    "--timeout-ms",
+                    "1",
                     "--warmup",
                     "1",
                     "--runs",
@@ -82,10 +84,13 @@ class AgentRuntimeResultContractTest(unittest.TestCase):
         self.assertIn(health["status"], {"ok", "degraded", "error"})
         self.assertEqual(health["engine_backend"], "onnxruntime")
         self.assertEqual(health["device"], "cpu")
+        self.assertEqual(health["timeout_policy"], "latency_threshold")
+        self.assertEqual(health["timeout_budget_ms"], 1)
         self.assertFalse(health["timeout_observed"])
 
         error = result["runtime_error_classification"]
         self.assertEqual(error["schema_version"], "inferedge-runtime-error-v1")
+        self.assertFalse(error["timeout_observed"])
         if result["success"]:
             self.assertEqual(error["status"], "none")
             self.assertEqual(error["category"], "none")
@@ -100,6 +105,9 @@ class AgentRuntimeResultContractTest(unittest.TestCase):
         self.assertIn("benchmark_completed", event_types)
         self.assertIn("runtime_error_classified", event_types)
         self.assertIn("agent_context_recorded", event_types)
+        error_event = next(event for event in runtime_events if event["type"] == "runtime_error_classified")
+        self.assertEqual(error_event["timeout_policy"], "latency_threshold")
+        self.assertFalse(error_event["timeout_observed"])
 
         extra = result["extra"]
         self.assertTrue(extra["agent_manifest_recorded"])

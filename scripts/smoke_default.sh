@@ -69,6 +69,7 @@ AGENT_OUTPUT_PATH="results/smoke_agent_result.json"
   --agent-task-id task_camera_frame_0001 \
   --agent-queue-wait-ms 7 \
   --agent-fallback-used \
+  --timeout-ms 1 \
   --warmup 1 \
   --runs 1 \
   --output "${AGENT_OUTPUT_PATH}"
@@ -89,6 +90,14 @@ assert agent["scheduled_priority"] == 90
 assert agent["latency_budget_ms"] == 33
 assert agent["queue_wait_ms"] == 7
 assert agent["fallback_used"] is True
+health = data["runtime_health_snapshot"]
+assert health["timeout_policy"] == "latency_threshold"
+assert health["timeout_budget_ms"] == 1
+assert health["timeout_observed"] is False
+error = data["runtime_error_classification"]
+assert error["timeout_observed"] is False
+events = {event["type"]: event for event in data["runtime_events"]}
+assert events["runtime_error_classified"]["timeout_policy"] == "latency_threshold"
 assert data["extra"]["agent_manifest_recorded"] is True
 PY
 

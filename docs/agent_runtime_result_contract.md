@@ -26,6 +26,7 @@ It records task metadata only. Runtime does not become a scheduler, deployment d
   --agent-task-id task_camera_frame_0001 \
   --agent-queue-wait-ms 7 \
   --agent-fallback-used \
+  --timeout-ms 1 \
   --warmup 1 \
   --runs 1 \
   --output results/agent_runtime_result.json
@@ -41,6 +42,7 @@ Relevant options:
 | `--agent-deadline-missed` | Explicitly marks the task as deadline missed. |
 | `--agent-fallback-used` | Records fallback policy usage. |
 | `--agent-execution-status <status>` | Overrides the agent execution status recorded in `agent.execution_status`. |
+| `--timeout-ms <n>` | Records a latency timeout observation threshold in Runtime health/error evidence. This is not production request cancellation. |
 
 ## Result JSON Shape
 
@@ -70,7 +72,8 @@ When provided, Runtime appends:
     "fps": 0.0,
     "power_mode": "unknown",
     "jetson_clocks": "unknown",
-    "timeout_policy": "not_configured",
+    "timeout_policy": "latency_threshold",
+    "timeout_budget_ms": 1,
     "timeout_observed": false
   },
   "runtime_error_classification": {
@@ -96,6 +99,13 @@ When provided, Runtime appends:
       "warmup": 1,
       "runs": 1,
       "mean_ms": 0.0
+    },
+    {
+      "type": "runtime_error_classified",
+      "status": "none",
+      "category": "none",
+      "timeout_policy": "latency_threshold",
+      "timeout_observed": false
     }
   ],
   "agent": {
@@ -159,7 +169,8 @@ When provided, Runtime appends:
 - `queue_wait_ms` is `null` unless supplied.
 - `execution_status` defaults to the Runtime benchmark status unless overridden.
 - `runtime_health_snapshot`, `runtime_error_classification`, and `runtime_events` are additive and safe for existing consumers to ignore.
-- Runtime does not claim timeout detection unless a timeout mechanism is explicitly implemented; current results record `timeout_policy: not_configured` and `timeout_observed: false`.
+- Runtime does not claim production request cancellation. `--timeout-ms` is an observation threshold: if a successful benchmark mean latency exceeds the configured threshold, Runtime records `timeout_observed: true`, `runtime_error_classification.category: runtime_timeout_observed`, and `retryable: true` for downstream reliability reporting.
+- Without `--timeout-ms`, results record `timeout_policy: not_configured`, `timeout_budget_ms: null`, and `timeout_observed: false`.
 
 ## Current Boundary
 
