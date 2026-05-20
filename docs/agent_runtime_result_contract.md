@@ -77,6 +77,8 @@ When provided, Runtime appends:
     "schema_version": "inferedge-runtime-health-v1",
     "status": "ok",
     "engine_backend": "onnxruntime",
+    "engine_available": true,
+    "engine_status_message": "",
     "device": "cpu",
     "input_mode": "synthetic",
     "input_preprocess": "synthetic",
@@ -88,8 +90,14 @@ When provided, Runtime appends:
     "latency_p95_ms": 0.0,
     "latency_p99_ms": 0.0,
     "fps": 0.0,
+    "latency_budget_ms": 33,
+    "latency_budget_exceeded": false,
+    "deadline_missed": false,
     "power_mode": "unknown",
     "jetson_clocks": "unknown",
+    "tegrastats_status": "not_provided",
+    "tegrastats_sample_count": 0,
+    "thermal_memory_evidence_available": false,
     "timeout_policy": "latency_threshold",
     "timeout_budget_ms": 1,
     "timeout_observed": false
@@ -98,32 +106,56 @@ When provided, Runtime appends:
     "schema_version": "inferedge-runtime-error-v1",
     "status": "none",
     "category": "none",
+    "severity": "none",
     "message": "",
+    "observed_mean_ms": 0.0,
+    "timeout_budget_ms": 1,
     "timeout_observed": false,
-    "retryable": false
+    "retryable": false,
+    "retry_hint": "none"
   },
   "runtime_events": [
     {
+      "schema_version": "inferedge-runtime-event-v1",
+      "event_index": 0,
       "type": "runtime_configured",
       "status": "ok",
       "engine_backend": "onnxruntime",
+      "engine_available": true,
+      "engine_status_message": "",
       "device": "cpu",
-      "input_mode": "synthetic"
+      "input_mode": "synthetic",
+      "timeout_policy": "latency_threshold"
     },
     {
+      "schema_version": "inferedge-runtime-event-v1",
+      "event_index": 1,
       "type": "benchmark_completed",
       "status": "success",
       "success": true,
       "warmup": 1,
       "runs": 1,
-      "mean_ms": 0.0
+      "mean_ms": 0.0,
+      "p95_ms": 0.0,
+      "p99_ms": 0.0,
+      "fps": 0.0,
+      "latency_budget_ms": 33,
+      "latency_budget_exceeded": false,
+      "deadline_missed": false
     },
     {
+      "schema_version": "inferedge-runtime-event-v1",
+      "event_index": 2,
       "type": "runtime_error_classified",
       "status": "none",
       "category": "none",
+      "severity": "none",
       "timeout_policy": "latency_threshold",
-      "timeout_observed": false
+      "timeout_budget_ms": 1,
+      "observed_mean_ms": 0.0,
+      "timeout_observed": false,
+      "retryable": false,
+      "retry_hint": "none"
     }
   ],
   "agent": {
@@ -187,6 +219,8 @@ When provided, Runtime appends:
 - `queue_wait_ms` is `null` unless supplied.
 - `execution_status` defaults to the Runtime benchmark status unless overridden.
 - `runtime_health_snapshot`, `runtime_error_classification`, and `runtime_events` are additive and safe for existing consumers to ignore.
+- `runtime_health_snapshot` includes backend availability, latency-budget/deadline observation, timeout observation, and tegrastats evidence availability when those values are known.
+- `runtime_events` uses additive `inferedge-runtime-event-v1` entries with sequential `event_index` values so Lab/Orchestrator reports can show a compact lifecycle trace.
 - Runtime does not claim production request cancellation. `--timeout-ms` is an observation threshold: if a successful benchmark mean latency exceeds the configured threshold, Runtime records `timeout_observed: true`, `runtime_error_classification.category: runtime_timeout_observed`, and `retryable: true` for downstream reliability reporting.
 - Without `--timeout-ms`, results record `timeout_policy: not_configured`, `timeout_budget_ms: null`, and `timeout_observed: false`.
 

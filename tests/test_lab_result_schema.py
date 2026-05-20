@@ -159,6 +159,17 @@ def validate_optional_runtime_operation_evidence(result: dict) -> None:
         for field in ("success", "run_once", "timeout_observed"):
             if not isinstance(health.get(field), bool):
                 raise AssertionError(f"runtime_health_snapshot.{field} must be a boolean")
+        for field in (
+            "engine_available",
+            "latency_budget_exceeded",
+            "deadline_missed",
+            "thermal_memory_evidence_available",
+        ):
+            if field in health and not isinstance(health[field], bool):
+                raise AssertionError(f"runtime_health_snapshot.{field} must be a boolean when present")
+        for field in ("tegrastats_status", "engine_status_message"):
+            if field in health and not isinstance(health[field], str):
+                raise AssertionError(f"runtime_health_snapshot.{field} must be a string when present")
         timeout_budget = health.get("timeout_budget_ms")
         if timeout_budget is not None and (
             isinstance(timeout_budget, bool) or not isinstance(timeout_budget, int)
@@ -177,12 +188,17 @@ def validate_optional_runtime_operation_evidence(result: dict) -> None:
         for field in ("timeout_observed", "retryable"):
             if not isinstance(error.get(field), bool):
                 raise AssertionError(f"runtime_error_classification.{field} must be a boolean")
+        if "severity" in error and not isinstance(error["severity"], str):
+            raise AssertionError("runtime_error_classification.severity must be a string when present")
+        if "retry_hint" in error and not isinstance(error["retry_hint"], str):
+            raise AssertionError("runtime_error_classification.retry_hint must be a string when present")
 
     events = result.get("runtime_events")
     if events is not None:
         if not isinstance(events, list):
             raise AssertionError("runtime_events must be an array when present")
         event_types = []
+        event_indexes = []
         for event in events:
             if not isinstance(event, dict):
                 raise AssertionError("runtime_events items must be objects")
@@ -190,6 +206,14 @@ def validate_optional_runtime_operation_evidence(result: dict) -> None:
             if not isinstance(event_type, str) or not event_type:
                 raise AssertionError("runtime_events[].type must be a non-empty string")
             event_types.append(event_type)
+            if "schema_version" in event and not isinstance(event["schema_version"], str):
+                raise AssertionError("runtime_events[].schema_version must be a string when present")
+            if "event_index" in event:
+                if isinstance(event["event_index"], bool) or not isinstance(event["event_index"], int):
+                    raise AssertionError("runtime_events[].event_index must be an integer when present")
+                event_indexes.append(event["event_index"])
+        if event_indexes and event_indexes != list(range(len(event_indexes))):
+            raise AssertionError("runtime_events[].event_index must be sequential when present")
         for expected in ("runtime_configured", "benchmark_completed", "runtime_error_classified"):
             if expected not in event_types:
                 raise AssertionError(f"runtime_events must include {expected}")

@@ -362,19 +362,55 @@ std::string runtime_error_category(const RuntimeConfig& config, const BenchmarkR
     return "runtime_error";
 }
 
+std::string runtime_error_severity(const RuntimeConfig& config, const BenchmarkResult& benchmark_result) {
+    if (timeout_observed(config, benchmark_result)) {
+        return "warning";
+    }
+    if (benchmark_result.success) {
+        return "none";
+    }
+    if (benchmark_result.status == "skipped") {
+        return "warning";
+    }
+    return "error";
+}
+
+std::string runtime_retry_hint(const RuntimeConfig& config, const BenchmarkResult& benchmark_result) {
+    if (timeout_observed(config, benchmark_result)) {
+        return "retry_or_degrade";
+    }
+    if (benchmark_result.success) {
+        return "none";
+    }
+    if (benchmark_result.status == "skipped") {
+        return "check_backend_availability";
+    }
+    return "check_runtime_error";
+}
+
+bool latency_budget_exceeded(const RuntimeConfig& config, const BenchmarkResult& benchmark_result) {
+    return benchmark_result.success &&
+           config.agent_latency_budget_ms > 0 &&
+           benchmark_result.mean_ms > static_cast<double>(config.agent_latency_budget_ms);
+}
+
 void write_runtime_health_snapshot_json(
     std::ostream& output,
     const RuntimeConfig& config,
     const EngineMetadata& engine_metadata,
     const BenchmarkResult& benchmark_result,
+    const TegrastatsSummary& tegrastats_summary,
     int indent_spaces) {
     const std::string indent(static_cast<std::size_t>(indent_spaces), ' ');
     const bool observed_timeout = timeout_observed(config, benchmark_result);
+    const bool exceeded_latency_budget = latency_budget_exceeded(config, benchmark_result);
     output
         << "{\n"
         << indent << "  \"schema_version\": \"inferedge-runtime-health-v1\",\n"
         << indent << "  \"status\": " << json_string(runtime_health_status(config, benchmark_result)) << ",\n"
         << indent << "  \"engine_backend\": " << json_string(engine_metadata.backend) << ",\n"
+        << indent << "  \"engine_available\": " << (engine_metadata.available ? "true" : "false") << ",\n"
+        << indent << "  \"engine_status_message\": " << json_string(engine_metadata.status_message) << ",\n"
         << indent << "  \"device\": " << json_string(config.device) << ",\n"
         << indent << "  \"input_mode\": " << json_string(config.input_mode()) << ",\n"
         << indent << "  \"input_preprocess\": " << json_string(config.input_preprocess()) << ",\n"
@@ -386,8 +422,21 @@ void write_runtime_health_snapshot_json(
         << indent << "  \"latency_p95_ms\": " << benchmark_result.p95_ms << ",\n"
         << indent << "  \"latency_p99_ms\": " << benchmark_result.p99_ms << ",\n"
         << indent << "  \"fps\": " << benchmark_result.fps << ",\n"
+        << indent << "  \"latency_budget_ms\": ";
+    if (config.agent_latency_budget_ms > 0) {
+        output << config.agent_latency_budget_ms;
+    } else {
+        output << "null";
+    }
+    output
+        << ",\n"
+        << indent << "  \"latency_budget_exceeded\": " << (exceeded_latency_budget ? "true" : "false") << ",\n"
+        << indent << "  \"deadline_missed\": " << (should_mark_deadline_missed(config, benchmark_result) ? "true" : "false") << ",\n"
         << indent << "  \"power_mode\": " << json_string(config.power_mode) << ",\n"
         << indent << "  \"jetson_clocks\": " << json_string(config.jetson_clocks) << ",\n"
+        << indent << "  \"tegrastats_status\": " << json_string(tegrastats_summary.status) << ",\n"
+        << indent << "  \"tegrastats_sample_count\": " << tegrastats_summary.sample_count << ",\n"
+        << indent << "  \"thermal_memory_evidence_available\": " << ((tegrastats_summary.status == "parsed") ? "true" : "false") << ",\n"
         << indent << "  \"timeout_policy\": "
         << json_string(config.timeout_ms > 0 ? "latency_threshold" : "not_configured") << ",\n"
         << indent << "  \"timeout_budget_ms\": ";
@@ -414,10 +463,21 @@ void write_runtime_error_classification_json(
         << indent << "  \"schema_version\": \"inferedge-runtime-error-v1\",\n"
         << indent << "  \"status\": " << json_string((benchmark_result.success && !observed_timeout) ? "none" : "classified") << ",\n"
         << indent << "  \"category\": " << json_string(runtime_error_category(config, benchmark_result)) << ",\n"
+        << indent << "  \"severity\": " << json_string(runtime_error_severity(config, benchmark_result)) << ",\n"
         << indent << "  \"message\": "
         << json_string(observed_timeout ? "mean latency exceeded configured timeout threshold" : (benchmark_result.success ? "" : benchmark_result.message)) << ",\n"
+        << indent << "  \"observed_mean_ms\": " << benchmark_result.mean_ms << ",\n"
+        << indent << "  \"timeout_budget_ms\": ";
+    if (config.timeout_ms > 0) {
+        output << config.timeout_ms;
+    } else {
+        output << "null";
+    }
+    output
+        << ",\n"
         << indent << "  \"timeout_observed\": " << (observed_timeout ? "true" : "false") << ",\n"
-        << indent << "  \"retryable\": " << (observed_timeout ? "true" : "false") << "\n"
+        << indent << "  \"retryable\": " << (observed_timeout ? "true" : "false") << ",\n"
+        << indent << "  \"retry_hint\": " << json_string(runtime_retry_hint(config, benchmark_result)) << "\n"
         << indent << "}";
 }
 
@@ -431,48 +491,94 @@ void write_runtime_events_json(
     const std::string indent(static_cast<std::size_t>(indent_spaces), ' ');
     const std::string item_indent(static_cast<std::size_t>(indent_spaces + 2), ' ');
     const bool observed_timeout = timeout_observed(config, benchmark_result);
+    const bool exceeded_latency_budget = latency_budget_exceeded(config, benchmark_result);
+    int event_index = 0;
 
     output
         << "[\n"
         << item_indent << "{\n"
+        << item_indent << "  \"schema_version\": \"inferedge-runtime-event-v1\",\n"
+        << item_indent << "  \"event_index\": " << event_index++ << ",\n"
         << item_indent << "  \"type\": \"runtime_configured\",\n"
         << item_indent << "  \"status\": \"ok\",\n"
         << item_indent << "  \"engine_backend\": " << json_string(engine_metadata.backend) << ",\n"
+        << item_indent << "  \"engine_available\": " << (engine_metadata.available ? "true" : "false") << ",\n"
+        << item_indent << "  \"engine_status_message\": " << json_string(engine_metadata.status_message) << ",\n"
         << item_indent << "  \"device\": " << json_string(config.device) << ",\n"
-        << item_indent << "  \"input_mode\": " << json_string(config.input_mode()) << "\n"
+        << item_indent << "  \"input_mode\": " << json_string(config.input_mode()) << ",\n"
+        << item_indent << "  \"timeout_policy\": "
+        << json_string(config.timeout_ms > 0 ? "latency_threshold" : "not_configured") << "\n"
         << item_indent << "},\n"
         << item_indent << "{\n"
+        << item_indent << "  \"schema_version\": \"inferedge-runtime-event-v1\",\n"
+        << item_indent << "  \"event_index\": " << event_index++ << ",\n"
         << item_indent << "  \"type\": \"benchmark_completed\",\n"
         << item_indent << "  \"status\": " << json_string(benchmark_result.status) << ",\n"
         << item_indent << "  \"success\": " << (benchmark_result.success ? "true" : "false") << ",\n"
         << item_indent << "  \"warmup\": " << benchmark_result.warmup_runs << ",\n"
         << item_indent << "  \"runs\": " << benchmark_result.timed_runs << ",\n"
-        << item_indent << "  \"mean_ms\": " << benchmark_result.mean_ms << "\n"
+        << item_indent << "  \"mean_ms\": " << benchmark_result.mean_ms << ",\n"
+        << item_indent << "  \"p95_ms\": " << benchmark_result.p95_ms << ",\n"
+        << item_indent << "  \"p99_ms\": " << benchmark_result.p99_ms << ",\n"
+        << item_indent << "  \"fps\": " << benchmark_result.fps << ",\n"
+        << item_indent << "  \"latency_budget_ms\": ";
+    if (config.agent_latency_budget_ms > 0) {
+        output << config.agent_latency_budget_ms;
+    } else {
+        output << "null";
+    }
+    output
+        << ",\n"
+        << item_indent << "  \"latency_budget_exceeded\": " << (exceeded_latency_budget ? "true" : "false") << ",\n"
+        << item_indent << "  \"deadline_missed\": " << (should_mark_deadline_missed(config, benchmark_result) ? "true" : "false") << "\n"
         << item_indent << "},\n"
         << item_indent << "{\n"
+        << item_indent << "  \"schema_version\": \"inferedge-runtime-event-v1\",\n"
+        << item_indent << "  \"event_index\": " << event_index++ << ",\n"
         << item_indent << "  \"type\": \"runtime_error_classified\",\n"
         << item_indent << "  \"status\": " << json_string((benchmark_result.success && !observed_timeout) ? "none" : "classified") << ",\n"
         << item_indent << "  \"category\": " << json_string(runtime_error_category(config, benchmark_result)) << ",\n"
+        << item_indent << "  \"severity\": " << json_string(runtime_error_severity(config, benchmark_result)) << ",\n"
         << item_indent << "  \"timeout_policy\": "
         << json_string(config.timeout_ms > 0 ? "latency_threshold" : "not_configured") << ",\n"
-        << item_indent << "  \"timeout_observed\": " << (observed_timeout ? "true" : "false") << "\n"
+        << item_indent << "  \"timeout_budget_ms\": ";
+    if (config.timeout_ms > 0) {
+        output << config.timeout_ms;
+    } else {
+        output << "null";
+    }
+    output
+        << ",\n"
+        << item_indent << "  \"observed_mean_ms\": " << benchmark_result.mean_ms << ",\n"
+        << item_indent << "  \"timeout_observed\": " << (observed_timeout ? "true" : "false") << ",\n"
+        << item_indent << "  \"retryable\": " << (observed_timeout ? "true" : "false") << ",\n"
+        << item_indent << "  \"retry_hint\": " << json_string(runtime_retry_hint(config, benchmark_result)) << "\n"
         << item_indent << "},\n";
 
     if (!config.agent_manifest_path.empty()) {
         output
             << item_indent << "{\n"
+            << item_indent << "  \"schema_version\": \"inferedge-runtime-event-v1\",\n"
+            << item_indent << "  \"event_index\": " << event_index++ << ",\n"
             << item_indent << "  \"type\": \"agent_context_recorded\",\n"
             << item_indent << "  \"status\": " << json_string(config.agent_manifest_applied ? "ok" : "provided") << ",\n"
             << item_indent << "  \"agent_id\": " << json_string(config.agent_id) << ",\n"
-            << item_indent << "  \"task_id\": " << json_string(config.agent_task_id) << "\n"
+            << item_indent << "  \"task_id\": " << json_string(config.agent_task_id) << ",\n"
+            << item_indent << "  \"deadline_missed\": " << (should_mark_deadline_missed(config, benchmark_result) ? "true" : "false") << ",\n"
+            << item_indent << "  \"fallback_used\": " << (config.agent_fallback_used ? "true" : "false") << "\n"
             << item_indent << "},\n";
     }
 
     output
         << item_indent << "{\n"
+        << item_indent << "  \"schema_version\": \"inferedge-runtime-event-v1\",\n"
+        << item_indent << "  \"event_index\": " << event_index++ << ",\n"
         << item_indent << "  \"type\": \"tegrastats_summary\",\n"
         << item_indent << "  \"status\": " << json_string(tegrastats_summary.status) << ",\n"
-        << item_indent << "  \"sample_count\": " << tegrastats_summary.sample_count << "\n"
+        << item_indent << "  \"sample_count\": " << tegrastats_summary.sample_count << ",\n"
+        << item_indent << "  \"ram_used_mb_max\": " << tegrastats_summary.ram_used_mb_max << ",\n"
+        << item_indent << "  \"max_temp_c\": " << tegrastats_summary.max_temp_c << ",\n"
+        << item_indent << "  \"vdd_in_mw_max\": " << tegrastats_summary.vdd_in_mw_max << "\n"
         << item_indent << "}\n"
         << indent << "]";
 }
@@ -664,7 +770,7 @@ std::filesystem::path write_result_json(
         << "\n"
         << "  },\n"
         << "  \"runtime_health_snapshot\": ";
-    write_runtime_health_snapshot_json(output, config, engine_metadata, benchmark_result, 2);
+    write_runtime_health_snapshot_json(output, config, engine_metadata, benchmark_result, tegrastats_summary, 2);
     output
         << ",\n"
         << "  \"runtime_error_classification\": ";

@@ -83,13 +83,22 @@ class AgentRuntimeResultContractTest(unittest.TestCase):
         self.assertEqual(health["schema_version"], "inferedge-runtime-health-v1")
         self.assertIn(health["status"], {"ok", "degraded", "error"})
         self.assertEqual(health["engine_backend"], "onnxruntime")
+        self.assertIn("engine_available", health)
+        self.assertIn("engine_status_message", health)
         self.assertEqual(health["device"], "cpu")
         self.assertEqual(health["timeout_policy"], "latency_threshold")
         self.assertEqual(health["timeout_budget_ms"], 1)
         self.assertFalse(health["timeout_observed"])
+        self.assertEqual(health["latency_budget_ms"], 33)
+        self.assertIn("latency_budget_exceeded", health)
+        self.assertIn("deadline_missed", health)
+        self.assertEqual(health["tegrastats_status"], "not_provided")
 
         error = result["runtime_error_classification"]
         self.assertEqual(error["schema_version"], "inferedge-runtime-error-v1")
+        self.assertIn(error["severity"], {"none", "warning", "error"})
+        self.assertIn("retry_hint", error)
+        self.assertEqual(error["timeout_budget_ms"], 1)
         self.assertFalse(error["timeout_observed"])
         if result["success"]:
             self.assertEqual(error["status"], "none")
@@ -100,13 +109,21 @@ class AgentRuntimeResultContractTest(unittest.TestCase):
 
         runtime_events = result["runtime_events"]
         self.assertIsInstance(runtime_events, list)
+        self.assertEqual([event["event_index"] for event in runtime_events], list(range(len(runtime_events))))
+        self.assertTrue(all(event["schema_version"] == "inferedge-runtime-event-v1" for event in runtime_events))
         event_types = {event["type"] for event in runtime_events}
         self.assertIn("runtime_configured", event_types)
         self.assertIn("benchmark_completed", event_types)
         self.assertIn("runtime_error_classified", event_types)
         self.assertIn("agent_context_recorded", event_types)
+        benchmark_event = next(event for event in runtime_events if event["type"] == "benchmark_completed")
+        self.assertEqual(benchmark_event["latency_budget_ms"], 33)
+        self.assertIn("latency_budget_exceeded", benchmark_event)
+        self.assertIn("deadline_missed", benchmark_event)
         error_event = next(event for event in runtime_events if event["type"] == "runtime_error_classified")
         self.assertEqual(error_event["timeout_policy"], "latency_threshold")
+        self.assertEqual(error_event["timeout_budget_ms"], 1)
+        self.assertIn("retry_hint", error_event)
         self.assertFalse(error_event["timeout_observed"])
 
         extra = result["extra"]
