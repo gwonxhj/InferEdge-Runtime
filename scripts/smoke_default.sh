@@ -94,10 +94,20 @@ health = data["runtime_health_snapshot"]
 assert health["timeout_policy"] == "latency_threshold"
 assert health["timeout_budget_ms"] == 1
 assert health["timeout_observed"] is False
+assert health["latency_budget_ms"] == 33
+assert "latency_budget_exceeded" in health
+assert "deadline_missed" in health
+assert health["tegrastats_status"] == "not_provided"
 error = data["runtime_error_classification"]
 assert error["timeout_observed"] is False
+assert error["timeout_budget_ms"] == 1
+assert error["severity"] in {"none", "warning", "error"}
+assert "retry_hint" in error
 events = {event["type"]: event for event in data["runtime_events"]}
 assert events["runtime_error_classified"]["timeout_policy"] == "latency_threshold"
+assert events["runtime_error_classified"]["timeout_budget_ms"] == 1
+assert events["benchmark_completed"]["latency_budget_ms"] == 33
+assert [event["event_index"] for event in data["runtime_events"]] == list(range(len(data["runtime_events"])))
 assert data["extra"]["agent_manifest_recorded"] is True
 PY
 

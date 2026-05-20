@@ -487,9 +487,9 @@ This is the first bridge toward the reliable edge agent runtime direction. It re
 
 Runtime result JSON also includes additive operation evidence blocks:
 
-- `runtime_health_snapshot`: execution health, backend/device context, run count, latency/FPS summary, and explicit timeout observation status. `--timeout-ms` records an observation threshold; it does not claim production request cancellation.
-- `runtime_error_classification`: structured success/error category for downstream report context.
-- `runtime_events`: compact lifecycle event log for configuration, benchmark completion, error classification, optional agent context, and tegrastats parsing.
+- `runtime_health_snapshot`: execution health, backend/device context, backend availability, run count, latency/FPS summary, latency-budget/deadline observation, tegrastats evidence availability, and explicit timeout observation status. `--timeout-ms` records an observation threshold; it does not claim production request cancellation.
+- `runtime_error_classification`: structured success/error category, severity, retry hint, observed mean latency, and timeout budget for downstream report context.
+- `runtime_events`: compact indexed lifecycle event log for configuration, benchmark completion, error classification, optional agent context, and tegrastats parsing.
 
 These fields are evidence for Orchestrator/Lab analysis. Runtime still does not schedule tasks or own deployment decisions.
 
