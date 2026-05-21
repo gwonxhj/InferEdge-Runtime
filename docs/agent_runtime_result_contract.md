@@ -9,6 +9,7 @@ Runtime may also append additive operation evidence blocks:
 - `runtime_health_snapshot`
 - `runtime_error_classification`
 - `runtime_events`
+- `runtime_operation_summary`
 
 These blocks support downstream runtime operation reporting without turning Runtime into a scheduler or deployment decision owner.
 
@@ -57,6 +58,7 @@ threshold. It records:
 - `runtime_health_snapshot.timeout_observed: true`
 - `runtime_error_classification.category: "runtime_timeout_observed"`
 - `runtime_error_classification.retryable: true`
+- `runtime_operation_summary.recommended_action: "review_latency_budget_or_degrade"`
 
 Lab treats this as deployment review evidence. Runtime still only records the
 observation; it does not cancel production requests or make deployment
@@ -86,6 +88,7 @@ When provided, Runtime appends:
     "runs": 1,
     "run_once": false,
     "success": true,
+    "health_reason": "benchmark_completed",
     "latency_mean_ms": 0.0,
     "latency_p95_ms": 0.0,
     "latency_p99_ms": 0.0,
@@ -150,14 +153,43 @@ When provided, Runtime appends:
       "status": "none",
       "category": "none",
       "severity": "none",
+      "health_reason": "benchmark_completed",
       "timeout_policy": "latency_threshold",
       "timeout_budget_ms": 1,
       "observed_mean_ms": 0.0,
       "timeout_observed": false,
       "retryable": false,
       "retry_hint": "none"
+    },
+    {
+      "schema_version": "inferedge-runtime-event-v1",
+      "event_index": 3,
+      "type": "runtime_operation_summary_recorded",
+      "status": "ok",
+      "health_reason": "benchmark_completed",
+      "recommended_action": "none",
+      "risk_labels": [],
+      "evidence_gaps": ["thermal_memory_evidence_missing"]
     }
   ],
+  "runtime_operation_summary": {
+    "schema_version": "inferedge-runtime-operation-summary-v1",
+    "observation_scope": "single_runtime_result",
+    "decision_owner": "lab",
+    "scheduler_owner": "orchestrator",
+    "production_cancellation": false,
+    "health_status": "ok",
+    "health_reason": "benchmark_completed",
+    "error_category": "none",
+    "retryable": false,
+    "recommended_action": "none",
+    "risk_labels": [],
+    "evidence_gaps": ["thermal_memory_evidence_missing"],
+    "timeout_observed": false,
+    "latency_budget_exceeded": false,
+    "deadline_missed": false,
+    "thermal_memory_evidence_available": false
+  },
   "agent": {
     "schema_version": "inferedge-runtime-agent-task-v1",
     "source_contract": "inferedge-agent-manifest-v1",
@@ -220,7 +252,11 @@ When provided, Runtime appends:
 - `execution_status` defaults to the Runtime benchmark status unless overridden.
 - `runtime_health_snapshot`, `runtime_error_classification`, and `runtime_events` are additive and safe for existing consumers to ignore.
 - `runtime_health_snapshot` includes backend availability, latency-budget/deadline observation, timeout observation, and tegrastats evidence availability when those values are known.
+- `runtime_health_snapshot.health_reason` gives a compact reason such as `benchmark_completed`, `backend_unavailable_or_not_enabled`, `runtime_execution_skipped`, or `timeout_threshold_exceeded`.
 - `runtime_events` uses additive `inferedge-runtime-event-v1` entries with sequential `event_index` values so Lab/Orchestrator reports can show a compact lifecycle trace.
+- `runtime_operation_summary` is an additive handoff index for Lab/Orchestrator/AIGuard. It repeats the health reason, retryability, risk labels, evidence gaps, and a conservative `recommended_action` without making the deployment decision itself.
+- `runtime_operation_summary.decision_owner` must remain `lab`, and `scheduler_owner` must remain `orchestrator`.
+- `runtime_operation_summary.production_cancellation` is always `false`; Runtime records observations only.
 - Runtime does not claim production request cancellation. `--timeout-ms` is an observation threshold: if a successful benchmark mean latency exceeds the configured threshold, Runtime records `timeout_observed: true`, `runtime_error_classification.category: runtime_timeout_observed`, and `retryable: true` for downstream reliability reporting.
 - If execution is skipped because Runtime cannot complete the configured benchmark, Runtime records `runtime_error_classification.category: runtime_execution_skipped`, `severity: warning`, `retryable: true`, and `retry_hint: check_backend_availability`. This is failure-handling evidence for Lab/Orchestrator reporting, not a production worker retry loop.
 - Without `--timeout-ms`, results record `timeout_policy: not_configured`, `timeout_budget_ms: null`, and `timeout_observed: false`.
