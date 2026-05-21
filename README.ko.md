@@ -75,7 +75,7 @@ Runtime은 Forge `agent_manifest.json`을 선택적으로 읽어 기존 Lab-comp
 
 이 기능은 reliable edge agent runtime 방향의 첫 Runtime-side contract입니다. `agent_id`, `task_id`, `agent_type`, priority, latency budget, queue wait, fallback usage, telemetry context를 기록하지만 기존 `result.json`의 top-level compare/report 필드는 변경하지 않습니다.
 
-Runtime result JSON에는 `runtime_health_snapshot`, `runtime_error_classification`, `runtime_events`도 additive evidence로 기록됩니다. 이제 health snapshot은 backend availability, latency budget/deadline observation, tegrastats evidence availability를 함께 남기고, runtime events는 sequential `event_index`를 가진 lifecycle trace로 기록됩니다. `--timeout-ms`는 latency timeout 관측 기준을 남기는 옵션이며, production request cancellation을 의미하지 않습니다.
+Runtime result JSON에는 `runtime_health_snapshot`, `runtime_error_classification`, `runtime_events`도 additive evidence로 기록됩니다. 이제 health snapshot은 backend availability, latency budget/deadline observation, tegrastats evidence availability를 함께 남기고, runtime events는 sequential `event_index`를 가진 lifecycle trace로 기록됩니다. `--timeout-ms`는 latency timeout 관측 기준을 남기는 옵션이며, production request cancellation을 의미하지 않습니다. 실행이 `skipped`로 끝나면 Runtime은 `runtime_execution_skipped`, `retryable: true`, `retry_hint: check_backend_availability`를 남겨 Lab/Orchestrator가 failure handling evidence로 해석할 수 있게 합니다.
 
 예시:
 
