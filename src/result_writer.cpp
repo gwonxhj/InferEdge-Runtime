@@ -388,6 +388,10 @@ std::string runtime_retry_hint(const RuntimeConfig& config, const BenchmarkResul
     return "check_runtime_error";
 }
 
+bool runtime_retryable(const RuntimeConfig& config, const BenchmarkResult& benchmark_result) {
+    return timeout_observed(config, benchmark_result) || benchmark_result.status == "skipped";
+}
+
 bool latency_budget_exceeded(const RuntimeConfig& config, const BenchmarkResult& benchmark_result) {
     return benchmark_result.success &&
            config.agent_latency_budget_ms > 0 &&
@@ -476,7 +480,7 @@ void write_runtime_error_classification_json(
     output
         << ",\n"
         << indent << "  \"timeout_observed\": " << (observed_timeout ? "true" : "false") << ",\n"
-        << indent << "  \"retryable\": " << (observed_timeout ? "true" : "false") << ",\n"
+        << indent << "  \"retryable\": " << (runtime_retryable(config, benchmark_result) ? "true" : "false") << ",\n"
         << indent << "  \"retry_hint\": " << json_string(runtime_retry_hint(config, benchmark_result)) << "\n"
         << indent << "}";
 }
@@ -551,7 +555,7 @@ void write_runtime_events_json(
         << ",\n"
         << item_indent << "  \"observed_mean_ms\": " << benchmark_result.mean_ms << ",\n"
         << item_indent << "  \"timeout_observed\": " << (observed_timeout ? "true" : "false") << ",\n"
-        << item_indent << "  \"retryable\": " << (observed_timeout ? "true" : "false") << ",\n"
+        << item_indent << "  \"retryable\": " << (runtime_retryable(config, benchmark_result) ? "true" : "false") << ",\n"
         << item_indent << "  \"retry_hint\": " << json_string(runtime_retry_hint(config, benchmark_result)) << "\n"
         << item_indent << "},\n";
 

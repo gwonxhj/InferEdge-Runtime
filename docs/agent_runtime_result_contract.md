@@ -222,6 +222,7 @@ When provided, Runtime appends:
 - `runtime_health_snapshot` includes backend availability, latency-budget/deadline observation, timeout observation, and tegrastats evidence availability when those values are known.
 - `runtime_events` uses additive `inferedge-runtime-event-v1` entries with sequential `event_index` values so Lab/Orchestrator reports can show a compact lifecycle trace.
 - Runtime does not claim production request cancellation. `--timeout-ms` is an observation threshold: if a successful benchmark mean latency exceeds the configured threshold, Runtime records `timeout_observed: true`, `runtime_error_classification.category: runtime_timeout_observed`, and `retryable: true` for downstream reliability reporting.
+- If execution is skipped because Runtime cannot complete the configured benchmark, Runtime records `runtime_error_classification.category: runtime_execution_skipped`, `severity: warning`, `retryable: true`, and `retry_hint: check_backend_availability`. This is failure-handling evidence for Lab/Orchestrator reporting, not a production worker retry loop.
 - Without `--timeout-ms`, results record `timeout_policy: not_configured`, `timeout_budget_ms: null`, and `timeout_observed: false`.
 
 ## Current Boundary

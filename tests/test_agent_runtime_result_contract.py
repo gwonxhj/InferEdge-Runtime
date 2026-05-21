@@ -103,6 +103,14 @@ class AgentRuntimeResultContractTest(unittest.TestCase):
         if result["success"]:
             self.assertEqual(error["status"], "none")
             self.assertEqual(error["category"], "none")
+            self.assertFalse(error["retryable"])
+        elif result["status"] == "skipped":
+            self.assertEqual(health["status"], "degraded")
+            self.assertEqual(error["status"], "classified")
+            self.assertEqual(error["category"], "runtime_execution_skipped")
+            self.assertEqual(error["severity"], "warning")
+            self.assertTrue(error["retryable"])
+            self.assertEqual(error["retry_hint"], "check_backend_availability")
         else:
             self.assertEqual(error["status"], "classified")
             self.assertNotEqual(error["category"], "none")
@@ -125,6 +133,7 @@ class AgentRuntimeResultContractTest(unittest.TestCase):
         self.assertEqual(error_event["timeout_budget_ms"], 1)
         self.assertIn("retry_hint", error_event)
         self.assertFalse(error_event["timeout_observed"])
+        self.assertEqual(error_event["retryable"], error["retryable"])
 
         extra = result["extra"]
         self.assertTrue(extra["agent_manifest_recorded"])

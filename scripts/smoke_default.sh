@@ -59,6 +59,20 @@ assert data["success"] is False, data["success"]
 assert data["run_config"]["power_mode"] == "unknown", data["run_config"]
 assert data["run_config"]["jetson_clocks"] == "unknown", data["run_config"]
 assert data["jetson_evidence"]["tegrastats_summary"]["status"] == "not_provided"
+health = data["runtime_health_snapshot"]
+assert health["status"] == "degraded", health
+assert health["success"] is False
+assert health["timeout_policy"] == "not_configured"
+assert health["timeout_observed"] is False
+error = data["runtime_error_classification"]
+assert error["status"] == "classified", error
+assert error["category"] == "runtime_execution_skipped", error
+assert error["severity"] == "warning", error
+assert error["retryable"] is True, error
+assert error["retry_hint"] == "check_backend_availability", error
+events = {event["type"]: event for event in data["runtime_events"]}
+assert events["runtime_error_classified"]["category"] == "runtime_execution_skipped"
+assert events["runtime_error_classified"]["retryable"] is True
 PY
 
 INFEREDGE_RUNTIME_RESULT_JSON="${OUTPUT_PATH}" python3 tests/test_lab_result_schema.py
