@@ -490,6 +490,7 @@ Runtime result JSON also includes additive operation evidence blocks:
 - `runtime_health_snapshot`: execution health, backend/device context, backend availability, run count, latency/FPS summary, latency-budget/deadline observation, tegrastats evidence availability, and explicit timeout observation status. `--timeout-ms` records an observation threshold; it does not claim production request cancellation.
 - `runtime_error_classification`: structured success/error category, severity, retryability, retry hint, observed mean latency, and timeout budget for downstream report context. Skipped execution is recorded as `runtime_execution_skipped` with `retry_hint: check_backend_availability` so Lab/Orchestrator can explain runtime failure handling without treating Runtime as a worker daemon.
 - `runtime_events`: compact indexed lifecycle event log for configuration, benchmark completion, error classification, optional agent context, and tegrastats parsing.
+- `runtime_operation_summary`: compact handoff index for Lab/Orchestrator/AIGuard with `health_reason`, `risk_labels`, `evidence_gaps`, retryability, and a conservative `recommended_action`. It keeps `decision_owner: lab`, `scheduler_owner: orchestrator`, and `production_cancellation: false`.
 
 These fields are evidence for Orchestrator/Lab analysis. Runtime still does not schedule tasks or own deployment decisions.
 

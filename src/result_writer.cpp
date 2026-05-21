@@ -259,6 +259,17 @@ void write_tegrastats_summary_json(std::ostream& output, const TegrastatsSummary
         << indent << "}";
 }
 
+void write_string_array_json(std::ostream& output, const std::vector<std::string>& values) {
+    output << '[';
+    for (std::size_t i = 0; i < values.size(); ++i) {
+        if (i > 0) {
+            output << ", ";
+        }
+        output << json_string(values[i]);
+    }
+    output << ']';
+}
+
 bool should_mark_deadline_missed(const RuntimeConfig& config, const BenchmarkResult& benchmark_result) {
     if (config.agent_deadline_missed_overridden) {
         return config.agent_deadline_missed;
@@ -398,6 +409,84 @@ bool latency_budget_exceeded(const RuntimeConfig& config, const BenchmarkResult&
            benchmark_result.mean_ms > static_cast<double>(config.agent_latency_budget_ms);
 }
 
+std::string runtime_health_reason(
+    const RuntimeConfig& config,
+    const EngineMetadata& engine_metadata,
+    const BenchmarkResult& benchmark_result) {
+    if (timeout_observed(config, benchmark_result)) {
+        return "timeout_threshold_exceeded";
+    }
+    if (benchmark_result.success) {
+        return "benchmark_completed";
+    }
+    if (benchmark_result.status == "skipped" && !engine_metadata.available) {
+        return "backend_unavailable_or_not_enabled";
+    }
+    if (benchmark_result.status == "skipped") {
+        return "runtime_execution_skipped";
+    }
+    return "runtime_execution_error";
+}
+
+std::vector<std::string> runtime_operation_risk_labels(
+    const RuntimeConfig& config,
+    const EngineMetadata& engine_metadata,
+    const BenchmarkResult& benchmark_result) {
+    std::vector<std::string> labels;
+    if (!benchmark_result.success) {
+        if (benchmark_result.status == "skipped") {
+            labels.push_back("runtime_execution_skipped");
+        } else {
+            labels.push_back("runtime_execution_error");
+        }
+        if (!engine_metadata.available) {
+            labels.push_back("backend_unavailable");
+        }
+    }
+    if (timeout_observed(config, benchmark_result)) {
+        labels.push_back("runtime_timeout_observed");
+    }
+    if (latency_budget_exceeded(config, benchmark_result)) {
+        labels.push_back("latency_budget_exceeded");
+    }
+    if (should_mark_deadline_missed(config, benchmark_result)) {
+        labels.push_back("deadline_missed");
+    }
+    return labels;
+}
+
+std::vector<std::string> runtime_operation_evidence_gaps(
+    const RuntimeConfig& config,
+    const TegrastatsSummary& tegrastats_summary) {
+    std::vector<std::string> gaps;
+    if (config.timeout_ms <= 0) {
+        gaps.push_back("timeout_policy_not_configured");
+    }
+    if (tegrastats_summary.status != "parsed") {
+        gaps.push_back("thermal_memory_evidence_missing");
+    }
+    return gaps;
+}
+
+std::string runtime_operation_recommended_action(
+    const RuntimeConfig& config,
+    const EngineMetadata& engine_metadata,
+    const BenchmarkResult& benchmark_result) {
+    if (timeout_observed(config, benchmark_result) || latency_budget_exceeded(config, benchmark_result)) {
+        return "review_latency_budget_or_degrade";
+    }
+    if (benchmark_result.success) {
+        return "none";
+    }
+    if (benchmark_result.status == "skipped" && !engine_metadata.available) {
+        return "check_backend_availability";
+    }
+    if (benchmark_result.status == "skipped") {
+        return "review_runtime_configuration";
+    }
+    return "inspect_runtime_error";
+}
+
 void write_runtime_health_snapshot_json(
     std::ostream& output,
     const RuntimeConfig& config,
@@ -422,6 +511,8 @@ void write_runtime_health_snapshot_json(
         << indent << "  \"runs\": " << config.runs << ",\n"
         << indent << "  \"run_once\": " << (config.run_once ? "true" : "false") << ",\n"
         << indent << "  \"success\": " << (benchmark_result.success ? "true" : "false") << ",\n"
+        << indent << "  \"health_reason\": "
+        << json_string(runtime_health_reason(config, engine_metadata, benchmark_result)) << ",\n"
         << indent << "  \"latency_mean_ms\": " << benchmark_result.mean_ms << ",\n"
         << indent << "  \"latency_p95_ms\": " << benchmark_result.p95_ms << ",\n"
         << indent << "  \"latency_p99_ms\": " << benchmark_result.p99_ms << ",\n"
@@ -452,6 +543,54 @@ void write_runtime_health_snapshot_json(
     output
         << ",\n"
         << indent << "  \"timeout_observed\": " << (observed_timeout ? "true" : "false") << "\n"
+        << indent << "}";
+}
+
+void write_runtime_operation_summary_json(
+    std::ostream& output,
+    const RuntimeConfig& config,
+    const EngineMetadata& engine_metadata,
+    const BenchmarkResult& benchmark_result,
+    const TegrastatsSummary& tegrastats_summary,
+    int indent_spaces) {
+    const std::string indent(static_cast<std::size_t>(indent_spaces), ' ');
+    const std::vector<std::string> risk_labels =
+        runtime_operation_risk_labels(config, engine_metadata, benchmark_result);
+    const std::vector<std::string> evidence_gaps =
+        runtime_operation_evidence_gaps(config, tegrastats_summary);
+    output
+        << "{\n"
+        << indent << "  \"schema_version\": \"inferedge-runtime-operation-summary-v1\",\n"
+        << indent << "  \"observation_scope\": \"single_runtime_result\",\n"
+        << indent << "  \"decision_owner\": \"lab\",\n"
+        << indent << "  \"scheduler_owner\": \"orchestrator\",\n"
+        << indent << "  \"production_cancellation\": false,\n"
+        << indent << "  \"health_status\": "
+        << json_string(runtime_health_status(config, benchmark_result)) << ",\n"
+        << indent << "  \"health_reason\": "
+        << json_string(runtime_health_reason(config, engine_metadata, benchmark_result)) << ",\n"
+        << indent << "  \"error_category\": "
+        << json_string(runtime_error_category(config, benchmark_result)) << ",\n"
+        << indent << "  \"retryable\": "
+        << (runtime_retryable(config, benchmark_result) ? "true" : "false") << ",\n"
+        << indent << "  \"recommended_action\": "
+        << json_string(runtime_operation_recommended_action(config, engine_metadata, benchmark_result)) << ",\n"
+        << indent << "  \"risk_labels\": ";
+    write_string_array_json(output, risk_labels);
+    output
+        << ",\n"
+        << indent << "  \"evidence_gaps\": ";
+    write_string_array_json(output, evidence_gaps);
+    output
+        << ",\n"
+        << indent << "  \"timeout_observed\": "
+        << (timeout_observed(config, benchmark_result) ? "true" : "false") << ",\n"
+        << indent << "  \"latency_budget_exceeded\": "
+        << (latency_budget_exceeded(config, benchmark_result) ? "true" : "false") << ",\n"
+        << indent << "  \"deadline_missed\": "
+        << (should_mark_deadline_missed(config, benchmark_result) ? "true" : "false") << ",\n"
+        << indent << "  \"thermal_memory_evidence_available\": "
+        << ((tegrastats_summary.status == "parsed") ? "true" : "false") << "\n"
         << indent << "}";
 }
 
@@ -543,6 +682,8 @@ void write_runtime_events_json(
         << item_indent << "  \"status\": " << json_string((benchmark_result.success && !observed_timeout) ? "none" : "classified") << ",\n"
         << item_indent << "  \"category\": " << json_string(runtime_error_category(config, benchmark_result)) << ",\n"
         << item_indent << "  \"severity\": " << json_string(runtime_error_severity(config, benchmark_result)) << ",\n"
+        << item_indent << "  \"health_reason\": "
+        << json_string(runtime_health_reason(config, engine_metadata, benchmark_result)) << ",\n"
         << item_indent << "  \"timeout_policy\": "
         << json_string(config.timeout_ms > 0 ? "latency_threshold" : "not_configured") << ",\n"
         << item_indent << "  \"timeout_budget_ms\": ";
@@ -574,6 +715,24 @@ void write_runtime_events_json(
     }
 
     output
+        << item_indent << "{\n"
+        << item_indent << "  \"schema_version\": \"inferedge-runtime-event-v1\",\n"
+        << item_indent << "  \"event_index\": " << event_index++ << ",\n"
+        << item_indent << "  \"type\": \"runtime_operation_summary_recorded\",\n"
+        << item_indent << "  \"status\": " << json_string(runtime_health_status(config, benchmark_result)) << ",\n"
+        << item_indent << "  \"health_reason\": "
+        << json_string(runtime_health_reason(config, engine_metadata, benchmark_result)) << ",\n"
+        << item_indent << "  \"recommended_action\": "
+        << json_string(runtime_operation_recommended_action(config, engine_metadata, benchmark_result)) << ",\n"
+        << item_indent << "  \"risk_labels\": ";
+    write_string_array_json(output, runtime_operation_risk_labels(config, engine_metadata, benchmark_result));
+    output
+        << ",\n"
+        << item_indent << "  \"evidence_gaps\": ";
+    write_string_array_json(output, runtime_operation_evidence_gaps(config, tegrastats_summary));
+    output
+        << "\n"
+        << item_indent << "},\n"
         << item_indent << "{\n"
         << item_indent << "  \"schema_version\": \"inferedge-runtime-event-v1\",\n"
         << item_indent << "  \"event_index\": " << event_index++ << ",\n"
@@ -783,6 +942,10 @@ std::filesystem::path write_result_json(
         << ",\n"
         << "  \"runtime_events\": ";
     write_runtime_events_json(output, config, engine_metadata, benchmark_result, tegrastats_summary, 2);
+    output
+        << ",\n"
+        << "  \"runtime_operation_summary\": ";
+    write_runtime_operation_summary_json(output, config, engine_metadata, benchmark_result, tegrastats_summary, 2);
     if (!config.agent_manifest_path.empty()) {
         output
             << ",\n"

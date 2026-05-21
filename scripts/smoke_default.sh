@@ -62,6 +62,7 @@ assert data["jetson_evidence"]["tegrastats_summary"]["status"] == "not_provided"
 health = data["runtime_health_snapshot"]
 assert health["status"] == "degraded", health
 assert health["success"] is False
+assert health["health_reason"] == "backend_unavailable_or_not_enabled", health
 assert health["timeout_policy"] == "not_configured"
 assert health["timeout_observed"] is False
 error = data["runtime_error_classification"]
@@ -73,6 +74,21 @@ assert error["retry_hint"] == "check_backend_availability", error
 events = {event["type"]: event for event in data["runtime_events"]}
 assert events["runtime_error_classified"]["category"] == "runtime_execution_skipped"
 assert events["runtime_error_classified"]["retryable"] is True
+assert events["runtime_error_classified"]["health_reason"] == health["health_reason"]
+summary_event = events["runtime_operation_summary_recorded"]
+assert summary_event["health_reason"] == health["health_reason"], summary_event
+assert summary_event["recommended_action"] == "check_backend_availability", summary_event
+operation = data["runtime_operation_summary"]
+assert operation["schema_version"] == "inferedge-runtime-operation-summary-v1", operation
+assert operation["decision_owner"] == "lab", operation
+assert operation["scheduler_owner"] == "orchestrator", operation
+assert operation["production_cancellation"] is False, operation
+assert operation["health_status"] == "degraded", operation
+assert operation["health_reason"] == health["health_reason"], operation
+assert operation["recommended_action"] == "check_backend_availability", operation
+assert "runtime_execution_skipped" in operation["risk_labels"], operation
+assert "backend_unavailable" in operation["risk_labels"], operation
+assert "timeout_policy_not_configured" in operation["evidence_gaps"], operation
 PY
 
 INFEREDGE_RUNTIME_RESULT_JSON="${OUTPUT_PATH}" python3 tests/test_lab_result_schema.py
@@ -108,6 +124,7 @@ health = data["runtime_health_snapshot"]
 assert health["timeout_policy"] == "latency_threshold"
 assert health["timeout_budget_ms"] == 1
 assert health["timeout_observed"] is False
+assert "health_reason" in health
 assert health["latency_budget_ms"] == 33
 assert "latency_budget_exceeded" in health
 assert "deadline_missed" in health
@@ -120,8 +137,17 @@ assert "retry_hint" in error
 events = {event["type"]: event for event in data["runtime_events"]}
 assert events["runtime_error_classified"]["timeout_policy"] == "latency_threshold"
 assert events["runtime_error_classified"]["timeout_budget_ms"] == 1
+assert events["runtime_error_classified"]["health_reason"] == health["health_reason"]
 assert events["benchmark_completed"]["latency_budget_ms"] == 33
+assert events["runtime_operation_summary_recorded"]["health_reason"] == health["health_reason"]
 assert [event["event_index"] for event in data["runtime_events"]] == list(range(len(data["runtime_events"])))
+operation = data["runtime_operation_summary"]
+assert operation["decision_owner"] == "lab", operation
+assert operation["scheduler_owner"] == "orchestrator", operation
+assert operation["production_cancellation"] is False, operation
+assert operation["health_reason"] == health["health_reason"], operation
+assert isinstance(operation["risk_labels"], list), operation
+assert isinstance(operation["evidence_gaps"], list), operation
 assert data["extra"]["agent_manifest_recorded"] is True
 PY
 

@@ -218,6 +218,45 @@ def validate_optional_runtime_operation_evidence(result: dict) -> None:
             if expected not in event_types:
                 raise AssertionError(f"runtime_events must include {expected}")
 
+    operation_summary = result.get("runtime_operation_summary")
+    if operation_summary is not None:
+        if not isinstance(operation_summary, dict):
+            raise AssertionError("runtime_operation_summary must be an object when present")
+        for field in (
+            "schema_version",
+            "observation_scope",
+            "decision_owner",
+            "scheduler_owner",
+            "health_status",
+            "health_reason",
+            "error_category",
+            "recommended_action",
+        ):
+            if field not in operation_summary:
+                raise AssertionError(f"runtime_operation_summary.{field} is required")
+            if not isinstance(operation_summary[field], str):
+                raise AssertionError(f"runtime_operation_summary.{field} must be a string")
+        if operation_summary["schema_version"] != "inferedge-runtime-operation-summary-v1":
+            raise AssertionError("runtime_operation_summary.schema_version is invalid")
+        if operation_summary["decision_owner"] != "lab":
+            raise AssertionError("runtime_operation_summary.decision_owner must remain lab")
+        if operation_summary["scheduler_owner"] != "orchestrator":
+            raise AssertionError("runtime_operation_summary.scheduler_owner must remain orchestrator")
+        for field in (
+            "production_cancellation",
+            "retryable",
+            "timeout_observed",
+            "latency_budget_exceeded",
+            "deadline_missed",
+            "thermal_memory_evidence_available",
+        ):
+            if not isinstance(operation_summary.get(field), bool):
+                raise AssertionError(f"runtime_operation_summary.{field} must be a boolean")
+        for field in ("risk_labels", "evidence_gaps"):
+            values = operation_summary.get(field)
+            if not isinstance(values, list) or not all(isinstance(item, str) for item in values):
+                raise AssertionError(f"runtime_operation_summary.{field} must be a string array")
+
 
 class JetsonEvidenceContractTest(unittest.TestCase):
     def test_runtime_binary_parses_tegrastats_log_when_available(self):

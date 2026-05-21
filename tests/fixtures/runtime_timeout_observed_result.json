@@ -120,6 +120,7 @@
     "runs": 10,
     "run_once": false,
     "success": true,
+    "health_reason": "timeout_threshold_exceeded",
     "latency_mean_ms": 12.345,
     "latency_p95_ms": 13.8,
     "latency_p99_ms": 14.2,
@@ -134,34 +135,81 @@
     "schema_version": "inferedge-runtime-error-v1",
     "status": "classified",
     "category": "runtime_timeout_observed",
+    "severity": "warning",
     "message": "mean latency exceeded configured timeout threshold",
+    "observed_mean_ms": 12.345,
+    "timeout_budget_ms": 10,
     "timeout_observed": true,
-    "retryable": true
+    "retryable": true,
+    "retry_hint": "retry_or_degrade"
   },
   "runtime_events": [
     {
+      "schema_version": "inferedge-runtime-event-v1",
+      "event_index": 0,
       "type": "runtime_configured",
       "status": "ok",
       "engine_backend": "onnxruntime",
       "device": "cpu",
-      "input_mode": "dummy"
+      "input_mode": "dummy",
+      "timeout_policy": "latency_threshold"
     },
     {
+      "schema_version": "inferedge-runtime-event-v1",
+      "event_index": 1,
       "type": "benchmark_completed",
       "status": "success",
       "success": true,
       "warmup": 3,
       "runs": 10,
-      "mean_ms": 12.345
+      "mean_ms": 12.345,
+      "latency_budget_exceeded": false,
+      "deadline_missed": false
     },
     {
+      "schema_version": "inferedge-runtime-event-v1",
+      "event_index": 2,
       "type": "runtime_error_classified",
       "status": "classified",
       "category": "runtime_timeout_observed",
+      "severity": "warning",
+      "health_reason": "timeout_threshold_exceeded",
       "timeout_policy": "latency_threshold",
-      "timeout_observed": true
+      "timeout_budget_ms": 10,
+      "observed_mean_ms": 12.345,
+      "timeout_observed": true,
+      "retryable": true,
+      "retry_hint": "retry_or_degrade"
+    },
+    {
+      "schema_version": "inferedge-runtime-event-v1",
+      "event_index": 3,
+      "type": "runtime_operation_summary_recorded",
+      "status": "degraded",
+      "health_reason": "timeout_threshold_exceeded",
+      "recommended_action": "review_latency_budget_or_degrade",
+      "risk_labels": ["runtime_timeout_observed"],
+      "evidence_gaps": ["thermal_memory_evidence_missing"]
     }
   ],
+  "runtime_operation_summary": {
+    "schema_version": "inferedge-runtime-operation-summary-v1",
+    "observation_scope": "single_runtime_result",
+    "decision_owner": "lab",
+    "scheduler_owner": "orchestrator",
+    "production_cancellation": false,
+    "health_status": "degraded",
+    "health_reason": "timeout_threshold_exceeded",
+    "error_category": "runtime_timeout_observed",
+    "retryable": true,
+    "recommended_action": "review_latency_budget_or_degrade",
+    "risk_labels": ["runtime_timeout_observed"],
+    "evidence_gaps": ["thermal_memory_evidence_missing"],
+    "timeout_observed": true,
+    "latency_budget_exceeded": false,
+    "deadline_missed": false,
+    "thermal_memory_evidence_available": false
+  },
   "extra": {
     "runtime": "inferedge-runtime",
     "json_export": "enabled",

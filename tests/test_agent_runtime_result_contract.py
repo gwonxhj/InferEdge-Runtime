@@ -82,6 +82,7 @@ class AgentRuntimeResultContractTest(unittest.TestCase):
         health = result["runtime_health_snapshot"]
         self.assertEqual(health["schema_version"], "inferedge-runtime-health-v1")
         self.assertIn(health["status"], {"ok", "degraded", "error"})
+        self.assertIn("health_reason", health)
         self.assertEqual(health["engine_backend"], "onnxruntime")
         self.assertIn("engine_available", health)
         self.assertIn("engine_status_message", health)
@@ -123,6 +124,7 @@ class AgentRuntimeResultContractTest(unittest.TestCase):
         self.assertIn("runtime_configured", event_types)
         self.assertIn("benchmark_completed", event_types)
         self.assertIn("runtime_error_classified", event_types)
+        self.assertIn("runtime_operation_summary_recorded", event_types)
         self.assertIn("agent_context_recorded", event_types)
         benchmark_event = next(event for event in runtime_events if event["type"] == "benchmark_completed")
         self.assertEqual(benchmark_event["latency_budget_ms"], 33)
@@ -131,9 +133,39 @@ class AgentRuntimeResultContractTest(unittest.TestCase):
         error_event = next(event for event in runtime_events if event["type"] == "runtime_error_classified")
         self.assertEqual(error_event["timeout_policy"], "latency_threshold")
         self.assertEqual(error_event["timeout_budget_ms"], 1)
+        self.assertEqual(error_event["health_reason"], health["health_reason"])
         self.assertIn("retry_hint", error_event)
         self.assertFalse(error_event["timeout_observed"])
         self.assertEqual(error_event["retryable"], error["retryable"])
+        operation_event = next(
+            event for event in runtime_events if event["type"] == "runtime_operation_summary_recorded"
+        )
+        self.assertEqual(operation_event["health_reason"], health["health_reason"])
+        self.assertIn("recommended_action", operation_event)
+        self.assertIsInstance(operation_event["risk_labels"], list)
+        self.assertIsInstance(operation_event["evidence_gaps"], list)
+
+        operation_summary = result["runtime_operation_summary"]
+        self.assertEqual(
+            operation_summary["schema_version"],
+            "inferedge-runtime-operation-summary-v1",
+        )
+        self.assertEqual(operation_summary["observation_scope"], "single_runtime_result")
+        self.assertEqual(operation_summary["decision_owner"], "lab")
+        self.assertEqual(operation_summary["scheduler_owner"], "orchestrator")
+        self.assertFalse(operation_summary["production_cancellation"])
+        self.assertEqual(operation_summary["health_status"], health["status"])
+        self.assertEqual(operation_summary["health_reason"], health["health_reason"])
+        self.assertEqual(operation_summary["retryable"], error["retryable"])
+        self.assertIn("recommended_action", operation_summary)
+        self.assertIsInstance(operation_summary["risk_labels"], list)
+        self.assertIsInstance(operation_summary["evidence_gaps"], list)
+        self.assertEqual(operation_summary["timeout_observed"], health["timeout_observed"])
+        self.assertEqual(
+            operation_summary["latency_budget_exceeded"],
+            health["latency_budget_exceeded"],
+        )
+        self.assertEqual(operation_summary["deadline_missed"], health["deadline_missed"])
 
         extra = result["extra"]
         self.assertTrue(extra["agent_manifest_recorded"])
