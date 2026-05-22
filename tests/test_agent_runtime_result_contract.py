@@ -167,6 +167,24 @@ class AgentRuntimeResultContractTest(unittest.TestCase):
         )
         self.assertEqual(operation_summary["deadline_missed"], health["deadline_missed"])
 
+        telemetry = result["runtime_telemetry"]
+        self.assertEqual(telemetry["schema_version"], "inferedge-runtime-telemetry-v1")
+        self.assertEqual(telemetry["evidence_role"], "runtime_telemetry_seed")
+        self.assertEqual(telemetry["collection_mode"], "single_result_export")
+        self.assertEqual(telemetry["source_result_schema_version"], "inferedge-runtime-result-v1")
+        self.assertEqual(telemetry["engine_backend"], "onnxruntime")
+        self.assertEqual(telemetry["device"], "cpu")
+        self.assertEqual(telemetry["operation"]["timeout_observed"], health["timeout_observed"])
+        self.assertEqual(
+            telemetry["operation"]["latency_budget_exceeded"],
+            health["latency_budget_exceeded"],
+        )
+        self.assertEqual(telemetry["operation"]["deadline_missed"], health["deadline_missed"])
+        self.assertEqual(telemetry["latency"]["mean_ms"], result["mean_ms"])
+        self.assertEqual(telemetry["latency"]["p99_ms"], result["p99_ms"])
+        self.assertFalse(telemetry["production_monitoring"])
+        self.assertIn("queue_depth", telemetry["missing_fields"])
+
         extra = result["extra"]
         self.assertTrue(extra["agent_manifest_recorded"])
         self.assertEqual(extra["agent_id"], "vision_detector")

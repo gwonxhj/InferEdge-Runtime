@@ -89,6 +89,16 @@ assert operation["recommended_action"] == "check_backend_availability", operatio
 assert "runtime_execution_skipped" in operation["risk_labels"], operation
 assert "backend_unavailable" in operation["risk_labels"], operation
 assert "timeout_policy_not_configured" in operation["evidence_gaps"], operation
+telemetry = data["runtime_telemetry"]
+assert telemetry["schema_version"] == "inferedge-runtime-telemetry-v1", telemetry
+assert telemetry["collection_mode"] == "single_result_export", telemetry
+assert telemetry["source_result_schema_version"] == "inferedge-runtime-result-v1", telemetry
+assert telemetry["engine_backend"] == data["engine_backend"], telemetry
+assert telemetry["latency"]["mean_ms"] == data["mean_ms"], telemetry
+assert telemetry["operation"]["timeout_observed"] == health["timeout_observed"], telemetry
+assert telemetry["production_monitoring"] is False, telemetry
+assert "queue_depth" in telemetry["missing_fields"], telemetry
+assert events["runtime_telemetry_recorded"]["schema"] == "inferedge-runtime-telemetry-v1"
 PY
 
 INFEREDGE_RUNTIME_RESULT_JSON="${OUTPUT_PATH}" python3 tests/test_lab_result_schema.py
@@ -148,6 +158,13 @@ assert operation["production_cancellation"] is False, operation
 assert operation["health_reason"] == health["health_reason"], operation
 assert isinstance(operation["risk_labels"], list), operation
 assert isinstance(operation["evidence_gaps"], list), operation
+telemetry = data["runtime_telemetry"]
+assert telemetry["schema_version"] == "inferedge-runtime-telemetry-v1", telemetry
+assert telemetry["operation"]["timeout_observed"] == health["timeout_observed"], telemetry
+assert telemetry["operation"]["latency_budget_exceeded"] == health["latency_budget_exceeded"], telemetry
+assert telemetry["operation"]["deadline_missed"] == health["deadline_missed"], telemetry
+assert telemetry["latency"]["p99_ms"] == data["p99_ms"], telemetry
+assert "runtime_telemetry_recorded" in events, events
 assert data["extra"]["agent_manifest_recorded"] is True
 PY
 

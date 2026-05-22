@@ -141,6 +141,7 @@ def validate_lab_compatible_result(result: dict) -> None:
         raise AssertionError("backend_key must be a string when present")
 
     validate_optional_runtime_operation_evidence(result)
+    validate_optional_runtime_telemetry(result)
 
 
 def validate_optional_runtime_operation_evidence(result: dict) -> None:
@@ -256,6 +257,81 @@ def validate_optional_runtime_operation_evidence(result: dict) -> None:
             values = operation_summary.get(field)
             if not isinstance(values, list) or not all(isinstance(item, str) for item in values):
                 raise AssertionError(f"runtime_operation_summary.{field} must be a string array")
+
+
+def validate_optional_runtime_telemetry(result: dict) -> None:
+    telemetry = result.get("runtime_telemetry")
+    if telemetry is None:
+        return
+    if not isinstance(telemetry, dict):
+        raise AssertionError("runtime_telemetry must be an object when present")
+    for field in (
+        "schema_version",
+        "evidence_role",
+        "collection_mode",
+        "source_result_schema_version",
+        "telemetry_timestamp",
+        "sequence_scope",
+        "engine_backend",
+        "device",
+        "input_mode",
+        "power_mode",
+        "jetson_clocks",
+    ):
+        if field not in telemetry:
+            raise AssertionError(f"runtime_telemetry.{field} is required")
+        if not isinstance(telemetry[field], str):
+            raise AssertionError(f"runtime_telemetry.{field} must be a string")
+    if telemetry["schema_version"] != "inferedge-runtime-telemetry-v1":
+        raise AssertionError("runtime_telemetry.schema_version is invalid")
+    if telemetry["collection_mode"] != "single_result_export":
+        raise AssertionError("runtime_telemetry.collection_mode must be single_result_export")
+    if isinstance(telemetry.get("execution_sequence_id"), bool) or not isinstance(
+        telemetry.get("execution_sequence_id"), int
+    ):
+        raise AssertionError("runtime_telemetry.execution_sequence_id must be an integer")
+    if not isinstance(telemetry.get("production_monitoring"), bool):
+        raise AssertionError("runtime_telemetry.production_monitoring must be a boolean")
+
+    latency = telemetry.get("latency")
+    if not isinstance(latency, dict):
+        raise AssertionError("runtime_telemetry.latency must be an object")
+    for field in (
+        "mean_ms",
+        "p95_ms",
+        "p99_ms",
+        "fps",
+        "inference_interval_ms",
+        "rolling_latency_mean_ms",
+        "rolling_latency_std_ms",
+    ):
+        value = latency.get(field)
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            raise AssertionError(f"runtime_telemetry.latency.{field} must be numeric")
+    if isinstance(latency.get("sample_count"), bool) or not isinstance(latency.get("sample_count"), int):
+        raise AssertionError("runtime_telemetry.latency.sample_count must be an integer")
+
+    resource = telemetry.get("resource")
+    if not isinstance(resource, dict):
+        raise AssertionError("runtime_telemetry.resource must be an object")
+    for field in ("telemetry_source", "tegrastats_status"):
+        if not isinstance(resource.get(field), str):
+            raise AssertionError(f"runtime_telemetry.resource.{field} must be a string")
+    if isinstance(resource.get("tegrastats_sample_count"), bool) or not isinstance(
+        resource.get("tegrastats_sample_count"), int
+    ):
+        raise AssertionError("runtime_telemetry.resource.tegrastats_sample_count must be an integer")
+
+    operation = telemetry.get("operation")
+    if not isinstance(operation, dict):
+        raise AssertionError("runtime_telemetry.operation must be an object")
+    for field in ("timeout_observed", "latency_budget_exceeded", "deadline_missed"):
+        if not isinstance(operation.get(field), bool):
+            raise AssertionError(f"runtime_telemetry.operation.{field} must be a boolean")
+
+    missing_fields = telemetry.get("missing_fields")
+    if not isinstance(missing_fields, list) or not all(isinstance(item, str) for item in missing_fields):
+        raise AssertionError("runtime_telemetry.missing_fields must be a string array")
 
 
 class JetsonEvidenceContractTest(unittest.TestCase):
