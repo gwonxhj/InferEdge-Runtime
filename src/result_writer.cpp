@@ -468,6 +468,23 @@ std::vector<std::string> runtime_operation_evidence_gaps(
     return gaps;
 }
 
+std::vector<std::string> runtime_telemetry_missing_fields(
+    const TegrastatsSummary& tegrastats_summary) {
+    std::vector<std::string> fields;
+    if (tegrastats_summary.status != "parsed") {
+        fields.push_back("ram_used_mb");
+        fields.push_back("thermal_max_temperature_c");
+        fields.push_back("power_vdd_in_mw");
+    }
+    fields.push_back("gpu_memory_used_mb");
+    fields.push_back("cpu_temperature_c");
+    fields.push_back("gpu_temperature_c");
+    fields.push_back("throttling_detected");
+    fields.push_back("queue_depth");
+    fields.push_back("runtime_uptime_sec");
+    return fields;
+}
+
 std::string runtime_operation_recommended_action(
     const RuntimeConfig& config,
     const EngineMetadata& engine_metadata,
@@ -591,6 +608,110 @@ void write_runtime_operation_summary_json(
         << (should_mark_deadline_missed(config, benchmark_result) ? "true" : "false") << ",\n"
         << indent << "  \"thermal_memory_evidence_available\": "
         << ((tegrastats_summary.status == "parsed") ? "true" : "false") << "\n"
+        << indent << "}";
+}
+
+void write_runtime_telemetry_json(
+    std::ostream& output,
+    const RuntimeConfig& config,
+    const EngineMetadata& engine_metadata,
+    const BenchmarkResult& benchmark_result,
+    const TegrastatsSummary& tegrastats_summary,
+    const std::string& timestamp,
+    int indent_spaces) {
+    const std::string indent(static_cast<std::size_t>(indent_spaces), ' ');
+    const bool has_tegrastats = tegrastats_summary.status == "parsed";
+    output
+        << "{\n"
+        << indent << "  \"schema_version\": \"inferedge-runtime-telemetry-v1\",\n"
+        << indent << "  \"evidence_role\": \"runtime_telemetry_seed\",\n"
+        << indent << "  \"collection_mode\": \"single_result_export\",\n"
+        << indent << "  \"source_result_schema_version\": \"inferedge-runtime-result-v1\",\n"
+        << indent << "  \"telemetry_timestamp\": " << json_string(timestamp) << ",\n"
+        << indent << "  \"execution_sequence_id\": 0,\n"
+        << indent << "  \"sequence_scope\": \"single_runtime_result\",\n"
+        << indent << "  \"engine_backend\": " << json_string(engine_metadata.backend) << ",\n"
+        << indent << "  \"device\": " << json_string(config.device) << ",\n"
+        << indent << "  \"input_mode\": " << json_string(config.input_mode()) << ",\n"
+        << indent << "  \"power_mode\": " << json_string(config.power_mode) << ",\n"
+        << indent << "  \"jetson_clocks\": " << json_string(config.jetson_clocks) << ",\n"
+        << indent << "  \"latency\": {\n"
+        << indent << "    \"mean_ms\": " << benchmark_result.mean_ms << ",\n"
+        << indent << "    \"p95_ms\": " << benchmark_result.p95_ms << ",\n"
+        << indent << "    \"p99_ms\": " << benchmark_result.p99_ms << ",\n"
+        << indent << "    \"fps\": " << benchmark_result.fps << ",\n"
+        << indent << "    \"inference_interval_ms\": " << benchmark_result.mean_ms << ",\n"
+        << indent << "    \"rolling_latency_mean_ms\": " << benchmark_result.mean_ms << ",\n"
+        << indent << "    \"rolling_latency_std_ms\": " << benchmark_result.std_ms << ",\n"
+        << indent << "    \"sample_count\": " << benchmark_result.samples_ms.size() << "\n"
+        << indent << "  },\n"
+        << indent << "  \"resource\": {\n"
+        << indent << "    \"ram_used_mb\": ";
+    if (has_tegrastats) {
+        output << tegrastats_summary.ram_used_mb_max;
+    } else {
+        output << "null";
+    }
+    output
+        << ",\n"
+        << indent << "    \"ram_total_mb\": ";
+    if (has_tegrastats) {
+        output << tegrastats_summary.ram_total_mb;
+    } else {
+        output << "null";
+    }
+    output
+        << ",\n"
+        << indent << "    \"gpu_memory_used_mb\": null,\n"
+        << indent << "    \"max_temperature_c\": ";
+    if (has_tegrastats) {
+        output << tegrastats_summary.max_temp_c;
+    } else {
+        output << "null";
+    }
+    output
+        << ",\n"
+        << indent << "    \"max_temperature_name\": "
+        << json_string(has_tegrastats ? tegrastats_summary.max_temp_name : "") << ",\n"
+        << indent << "    \"cpu_temperature_c\": null,\n"
+        << indent << "    \"gpu_temperature_c\": null,\n"
+        << indent << "    \"vdd_in_mw_avg\": ";
+    if (has_tegrastats) {
+        output << tegrastats_summary.vdd_in_mw_avg;
+    } else {
+        output << "null";
+    }
+    output
+        << ",\n"
+        << indent << "    \"vdd_in_mw_max\": ";
+    if (has_tegrastats) {
+        output << tegrastats_summary.vdd_in_mw_max;
+    } else {
+        output << "null";
+    }
+    output
+        << ",\n"
+        << indent << "    \"throttling_detected\": null,\n"
+        << indent << "    \"telemetry_source\": "
+        << json_string(has_tegrastats ? "tegrastats" : "not_available") << ",\n"
+        << indent << "    \"tegrastats_status\": " << json_string(tegrastats_summary.status) << ",\n"
+        << indent << "    \"tegrastats_sample_count\": " << tegrastats_summary.sample_count << "\n"
+        << indent << "  },\n"
+        << indent << "  \"operation\": {\n"
+        << indent << "    \"queue_depth\": null,\n"
+        << indent << "    \"runtime_uptime_sec\": null,\n"
+        << indent << "    \"timeout_observed\": "
+        << (timeout_observed(config, benchmark_result) ? "true" : "false") << ",\n"
+        << indent << "    \"latency_budget_exceeded\": "
+        << (latency_budget_exceeded(config, benchmark_result) ? "true" : "false") << ",\n"
+        << indent << "    \"deadline_missed\": "
+        << (should_mark_deadline_missed(config, benchmark_result) ? "true" : "false") << "\n"
+        << indent << "  },\n"
+        << indent << "  \"missing_fields\": ";
+    write_string_array_json(output, runtime_telemetry_missing_fields(tegrastats_summary));
+    output
+        << ",\n"
+        << indent << "  \"production_monitoring\": false\n"
         << indent << "}";
 }
 
@@ -730,6 +851,20 @@ void write_runtime_events_json(
         << ",\n"
         << item_indent << "  \"evidence_gaps\": ";
     write_string_array_json(output, runtime_operation_evidence_gaps(config, tegrastats_summary));
+    output
+        << "\n"
+        << item_indent << "},\n"
+        << item_indent << "{\n"
+        << item_indent << "  \"schema_version\": \"inferedge-runtime-event-v1\",\n"
+        << item_indent << "  \"event_index\": " << event_index++ << ",\n"
+        << item_indent << "  \"type\": \"runtime_telemetry_recorded\",\n"
+        << item_indent << "  \"status\": \"recorded\",\n"
+        << item_indent << "  \"schema\": \"inferedge-runtime-telemetry-v1\",\n"
+        << item_indent << "  \"collection_mode\": \"single_result_export\",\n"
+        << item_indent << "  \"telemetry_source\": "
+        << json_string(tegrastats_summary.status == "parsed" ? "tegrastats" : "not_available") << ",\n"
+        << item_indent << "  \"missing_fields\": ";
+    write_string_array_json(output, runtime_telemetry_missing_fields(tegrastats_summary));
     output
         << "\n"
         << item_indent << "},\n"
@@ -934,6 +1069,10 @@ std::filesystem::path write_result_json(
         << "  },\n"
         << "  \"runtime_health_snapshot\": ";
     write_runtime_health_snapshot_json(output, config, engine_metadata, benchmark_result, tegrastats_summary, 2);
+    output
+        << ",\n"
+        << "  \"runtime_telemetry\": ";
+    write_runtime_telemetry_json(output, config, engine_metadata, benchmark_result, tegrastats_summary, timestamp, 2);
     output
         << ",\n"
         << "  \"runtime_error_classification\": ";
