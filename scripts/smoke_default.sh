@@ -98,6 +98,16 @@ assert telemetry["latency"]["mean_ms"] == data["mean_ms"], telemetry
 assert telemetry["operation"]["timeout_observed"] == health["timeout_observed"], telemetry
 assert telemetry["production_monitoring"] is False, telemetry
 assert "queue_depth" in telemetry["missing_fields"], telemetry
+coverage = telemetry["coverage"]
+assert coverage["schema_version"] == "inferedge-runtime-telemetry-coverage-v1", coverage
+assert coverage["comparability_owner"] == "edgeenv", coverage
+assert coverage["missing_telemetry_is_failure"] is False, coverage
+assert "queue_depth" in coverage["expected_fields"], coverage
+assert "queue_depth" in coverage["missing_fields"], coverage
+assert "telemetry_timestamp" in coverage["observed_fields"], coverage
+assert coverage["missing_fields"] == telemetry["missing_fields"], coverage
+assert events["runtime_telemetry_recorded"]["observed_field_count"] == coverage["observed_field_count"]
+assert events["runtime_telemetry_recorded"]["missing_field_count"] == coverage["missing_field_count"]
 assert events["runtime_telemetry_recorded"]["schema"] == "inferedge-runtime-telemetry-v1"
 PY
 
@@ -164,6 +174,10 @@ assert telemetry["operation"]["timeout_observed"] == health["timeout_observed"],
 assert telemetry["operation"]["latency_budget_exceeded"] == health["latency_budget_exceeded"], telemetry
 assert telemetry["operation"]["deadline_missed"] == health["deadline_missed"], telemetry
 assert telemetry["latency"]["p99_ms"] == data["p99_ms"], telemetry
+coverage = telemetry["coverage"]
+assert coverage["schema_version"] == "inferedge-runtime-telemetry-coverage-v1", coverage
+assert coverage["comparability_owner"] == "edgeenv", coverage
+assert coverage["missing_fields"] == telemetry["missing_fields"], coverage
 assert "runtime_telemetry_recorded" in events, events
 assert data["extra"]["agent_manifest_recorded"] is True
 PY

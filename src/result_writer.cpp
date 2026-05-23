@@ -270,6 +270,10 @@ void write_string_array_json(std::ostream& output, const std::vector<std::string
     output << ']';
 }
 
+bool contains_string(const std::vector<std::string>& values, const std::string& target) {
+    return std::find(values.begin(), values.end(), target) != values.end();
+}
+
 bool should_mark_deadline_missed(const RuntimeConfig& config, const BenchmarkResult& benchmark_result) {
     if (config.agent_deadline_missed_overridden) {
         return config.agent_deadline_missed;
@@ -483,6 +487,77 @@ std::vector<std::string> runtime_telemetry_missing_fields(
     fields.push_back("queue_depth");
     fields.push_back("runtime_uptime_sec");
     return fields;
+}
+
+std::vector<std::string> runtime_telemetry_expected_fields() {
+    return {
+        "gpu_temperature_c",
+        "cpu_temperature_c",
+        "thermal_max_temperature_c",
+        "gpu_memory_used_mb",
+        "ram_used_mb",
+        "power_mode",
+        "throttling_detected",
+        "queue_depth",
+        "inference_interval_ms",
+        "runtime_uptime_sec",
+        "rolling_latency_mean_ms",
+        "rolling_latency_std_ms",
+        "telemetry_timestamp",
+        "execution_sequence_id",
+    };
+}
+
+std::vector<std::string> runtime_telemetry_observed_fields(
+    const TegrastatsSummary& tegrastats_summary) {
+    const std::vector<std::string> missing_fields =
+        runtime_telemetry_missing_fields(tegrastats_summary);
+    std::vector<std::string> observed_fields;
+    for (const std::string& field : runtime_telemetry_expected_fields()) {
+        if (!contains_string(missing_fields, field)) {
+            observed_fields.push_back(field);
+        }
+    }
+    return observed_fields;
+}
+
+void write_runtime_telemetry_coverage_json(
+    std::ostream& output,
+    const TegrastatsSummary& tegrastats_summary,
+    int indent_spaces) {
+    const std::string indent(static_cast<std::size_t>(indent_spaces), ' ');
+    const std::vector<std::string> expected_fields = runtime_telemetry_expected_fields();
+    const std::vector<std::string> observed_fields =
+        runtime_telemetry_observed_fields(tegrastats_summary);
+    const std::vector<std::string> missing_fields =
+        runtime_telemetry_missing_fields(tegrastats_summary);
+    const double coverage_ratio = expected_fields.empty()
+        ? 0.0
+        : static_cast<double>(observed_fields.size()) /
+              static_cast<double>(expected_fields.size());
+
+    output
+        << "{\n"
+        << indent << "  \"schema_version\": \"inferedge-runtime-telemetry-coverage-v1\",\n"
+        << indent << "  \"coverage_scope\": \"single_result_export\",\n"
+        << indent << "  \"comparability_owner\": \"edgeenv\",\n"
+        << indent << "  \"missing_telemetry_is_failure\": false,\n"
+        << indent << "  \"expected_fields\": ";
+    write_string_array_json(output, expected_fields);
+    output
+        << ",\n"
+        << indent << "  \"observed_fields\": ";
+    write_string_array_json(output, observed_fields);
+    output
+        << ",\n"
+        << indent << "  \"missing_fields\": ";
+    write_string_array_json(output, missing_fields);
+    output
+        << ",\n"
+        << indent << "  \"observed_field_count\": " << observed_fields.size() << ",\n"
+        << indent << "  \"missing_field_count\": " << missing_fields.size() << ",\n"
+        << indent << "  \"coverage_ratio\": " << coverage_ratio << "\n"
+        << indent << "}";
 }
 
 std::string runtime_operation_recommended_action(
@@ -711,6 +786,10 @@ void write_runtime_telemetry_json(
     write_string_array_json(output, runtime_telemetry_missing_fields(tegrastats_summary));
     output
         << ",\n"
+        << indent << "  \"coverage\": ";
+    write_runtime_telemetry_coverage_json(output, tegrastats_summary, indent_spaces + 2);
+    output
+        << ",\n"
         << indent << "  \"production_monitoring\": false\n"
         << indent << "}";
 }
@@ -866,7 +945,11 @@ void write_runtime_events_json(
         << item_indent << "  \"missing_fields\": ";
     write_string_array_json(output, runtime_telemetry_missing_fields(tegrastats_summary));
     output
-        << "\n"
+        << ",\n"
+        << item_indent << "  \"observed_field_count\": "
+        << runtime_telemetry_observed_fields(tegrastats_summary).size() << ",\n"
+        << item_indent << "  \"missing_field_count\": "
+        << runtime_telemetry_missing_fields(tegrastats_summary).size() << "\n"
         << item_indent << "},\n"
         << item_indent << "{\n"
         << item_indent << "  \"schema_version\": \"inferedge-runtime-event-v1\",\n"
