@@ -333,6 +333,48 @@ def validate_optional_runtime_telemetry(result: dict) -> None:
     if not isinstance(missing_fields, list) or not all(isinstance(item, str) for item in missing_fields):
         raise AssertionError("runtime_telemetry.missing_fields must be a string array")
 
+    coverage = telemetry.get("coverage")
+    if not isinstance(coverage, dict):
+        raise AssertionError("runtime_telemetry.coverage must be an object")
+    for field in ("schema_version", "coverage_scope", "comparability_owner"):
+        if not isinstance(coverage.get(field), str):
+            raise AssertionError(f"runtime_telemetry.coverage.{field} must be a string")
+    if coverage["schema_version"] != "inferedge-runtime-telemetry-coverage-v1":
+        raise AssertionError("runtime_telemetry.coverage.schema_version is invalid")
+    if coverage["coverage_scope"] != "single_result_export":
+        raise AssertionError("runtime_telemetry.coverage.coverage_scope is invalid")
+    if coverage["comparability_owner"] != "edgeenv":
+        raise AssertionError("runtime_telemetry.coverage.comparability_owner must be edgeenv")
+    if coverage.get("missing_telemetry_is_failure") is not False:
+        raise AssertionError("runtime_telemetry.coverage.missing_telemetry_is_failure must be false")
+    for field in ("expected_fields", "observed_fields", "missing_fields"):
+        values = coverage.get(field)
+        if not isinstance(values, list) or not all(isinstance(item, str) for item in values):
+            raise AssertionError(f"runtime_telemetry.coverage.{field} must be a string array")
+    if coverage["missing_fields"] != missing_fields:
+        raise AssertionError("runtime_telemetry.coverage.missing_fields must mirror runtime_telemetry.missing_fields")
+    for field in ("observed_field_count", "missing_field_count"):
+        if isinstance(coverage.get(field), bool) or not isinstance(coverage.get(field), int):
+            raise AssertionError(f"runtime_telemetry.coverage.{field} must be an integer")
+    if coverage["observed_field_count"] != len(coverage["observed_fields"]):
+        raise AssertionError("runtime_telemetry.coverage.observed_field_count mismatch")
+    if coverage["missing_field_count"] != len(coverage["missing_fields"]):
+        raise AssertionError("runtime_telemetry.coverage.missing_field_count mismatch")
+    coverage_ratio = coverage.get("coverage_ratio")
+    if isinstance(coverage_ratio, bool) or not isinstance(coverage_ratio, (int, float)):
+        raise AssertionError("runtime_telemetry.coverage.coverage_ratio must be numeric")
+    for expected in (
+        "telemetry_timestamp",
+        "execution_sequence_id",
+        "inference_interval_ms",
+        "rolling_latency_mean_ms",
+        "rolling_latency_std_ms",
+        "queue_depth",
+        "gpu_memory_used_mb",
+    ):
+        if expected not in coverage["expected_fields"]:
+            raise AssertionError(f"runtime_telemetry.coverage.expected_fields missing {expected}")
+
 
 class JetsonEvidenceContractTest(unittest.TestCase):
     def test_runtime_binary_parses_tegrastats_log_when_available(self):

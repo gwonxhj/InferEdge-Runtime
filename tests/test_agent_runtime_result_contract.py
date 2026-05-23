@@ -184,6 +184,25 @@ class AgentRuntimeResultContractTest(unittest.TestCase):
         self.assertEqual(telemetry["latency"]["p99_ms"], result["p99_ms"])
         self.assertFalse(telemetry["production_monitoring"])
         self.assertIn("queue_depth", telemetry["missing_fields"])
+        coverage = telemetry["coverage"]
+        self.assertEqual(
+            coverage["schema_version"],
+            "inferedge-runtime-telemetry-coverage-v1",
+        )
+        self.assertEqual(coverage["comparability_owner"], "edgeenv")
+        self.assertFalse(coverage["missing_telemetry_is_failure"])
+        self.assertIn("queue_depth", coverage["expected_fields"])
+        self.assertIn("queue_depth", coverage["missing_fields"])
+        self.assertIn("telemetry_timestamp", coverage["observed_fields"])
+        self.assertEqual(coverage["missing_fields"], telemetry["missing_fields"])
+        self.assertEqual(
+            coverage["observed_field_count"],
+            len(coverage["observed_fields"]),
+        )
+        self.assertEqual(
+            coverage["missing_field_count"],
+            len(coverage["missing_fields"]),
+        )
 
         extra = result["extra"]
         self.assertTrue(extra["agent_manifest_recorded"])

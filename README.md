@@ -500,6 +500,7 @@ Runtime Intelligence boundary:
 - `runtime_telemetry.schema_version` is `inferedge-runtime-telemetry-v1`.
 - `collection_mode` starts as `single_result_export`; EdgeEnv owns telemetry history accumulation and comparability-first regression.
 - Missing device telemetry remains explicit in `missing_fields` instead of being fabricated.
+- `runtime_telemetry.coverage` records expected / observed / missing telemetry fields, with `comparability_owner: edgeenv` and `missing_telemetry_is_failure: false`.
 - Runtime exports telemetry evidence only. AIGuard may turn it into deterministic anomaly evidence, and Lab remains the deployment decision owner.
 
 The committed fixture
