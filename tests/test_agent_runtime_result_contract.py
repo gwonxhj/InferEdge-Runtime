@@ -203,6 +203,39 @@ class AgentRuntimeResultContractTest(unittest.TestCase):
             coverage["missing_field_count"],
             len(coverage["missing_fields"]),
         )
+        history_seed = telemetry["history_seed"]
+        self.assertEqual(
+            history_seed["schema_version"],
+            "inferedge-runtime-telemetry-history-seed-v1",
+        )
+        self.assertEqual(history_seed["registry_owner"], "edgeenv")
+        self.assertEqual(history_seed["decision_owner"], "lab")
+        self.assertEqual(
+            history_seed["source_telemetry_schema_version"],
+            telemetry["schema_version"],
+        )
+        self.assertFalse(history_seed["production_monitoring"])
+        self.assertFalse(history_seed["missing_telemetry_is_failure"])
+        self.assertTrue(history_seed["replay_ready"])
+        self.assertIn("compare_key", history_seed["recommended_registry_key_fields"])
+        self.assertIn("latency.mean_ms", history_seed["time_series_fields"])
+        self.assertEqual(
+            history_seed["source_result"]["compare_key"],
+            result["compare_key"],
+        )
+        self.assertEqual(
+            history_seed["source_result"]["backend_key"],
+            result["backend_key"],
+        )
+        self.assertEqual(history_seed["source_result"]["precision"], result["precision"])
+        self.assertEqual(history_seed["source_result"]["power_mode"], result["run_config"]["power_mode"])
+        point = history_seed["points"][0]
+        self.assertEqual(point["execution_sequence_id"], telemetry["execution_sequence_id"])
+        self.assertEqual(point["telemetry_timestamp"], telemetry["telemetry_timestamp"])
+        self.assertEqual(point["mean_ms"], telemetry["latency"]["mean_ms"])
+        self.assertEqual(point["p99_ms"], telemetry["latency"]["p99_ms"])
+        self.assertEqual(point["timeout_observed"], telemetry["operation"]["timeout_observed"])
+        self.assertEqual(point["deadline_missed"], telemetry["operation"]["deadline_missed"])
 
         extra = result["extra"]
         self.assertTrue(extra["agent_manifest_recorded"])

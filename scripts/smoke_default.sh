@@ -106,6 +106,22 @@ assert "queue_depth" in coverage["expected_fields"], coverage
 assert "queue_depth" in coverage["missing_fields"], coverage
 assert "telemetry_timestamp" in coverage["observed_fields"], coverage
 assert coverage["missing_fields"] == telemetry["missing_fields"], coverage
+history_seed = telemetry["history_seed"]
+assert history_seed["schema_version"] == "inferedge-runtime-telemetry-history-seed-v1", history_seed
+assert history_seed["registry_owner"] == "edgeenv", history_seed
+assert history_seed["decision_owner"] == "lab", history_seed
+assert history_seed["source_telemetry_schema_version"] == telemetry["schema_version"], history_seed
+assert history_seed["production_monitoring"] is False, history_seed
+assert history_seed["missing_telemetry_is_failure"] is False, history_seed
+assert history_seed["replay_ready"] is True, history_seed
+assert "compare_key" in history_seed["recommended_registry_key_fields"], history_seed
+assert "latency.mean_ms" in history_seed["time_series_fields"], history_seed
+assert history_seed["source_result"]["compare_key"] == data["compare_key"], history_seed
+assert history_seed["source_result"]["backend_key"] == data["backend_key"], history_seed
+assert history_seed["points"][0]["telemetry_timestamp"] == telemetry["telemetry_timestamp"], history_seed
+assert history_seed["points"][0]["execution_sequence_id"] == telemetry["execution_sequence_id"], history_seed
+assert history_seed["points"][0]["mean_ms"] == telemetry["latency"]["mean_ms"], history_seed
+assert history_seed["points"][0]["timeout_observed"] == telemetry["operation"]["timeout_observed"], history_seed
 assert events["runtime_telemetry_recorded"]["observed_field_count"] == coverage["observed_field_count"]
 assert events["runtime_telemetry_recorded"]["missing_field_count"] == coverage["missing_field_count"]
 assert events["runtime_telemetry_recorded"]["schema"] == "inferedge-runtime-telemetry-v1"
@@ -178,6 +194,12 @@ coverage = telemetry["coverage"]
 assert coverage["schema_version"] == "inferedge-runtime-telemetry-coverage-v1", coverage
 assert coverage["comparability_owner"] == "edgeenv", coverage
 assert coverage["missing_fields"] == telemetry["missing_fields"], coverage
+history_seed = telemetry["history_seed"]
+assert history_seed["registry_owner"] == "edgeenv", history_seed
+assert history_seed["decision_owner"] == "lab", history_seed
+assert history_seed["source_result"]["compare_key"] == data["compare_key"], history_seed
+assert history_seed["points"][0]["p99_ms"] == telemetry["latency"]["p99_ms"], history_seed
+assert history_seed["points"][0]["deadline_missed"] == telemetry["operation"]["deadline_missed"], history_seed
 assert "runtime_telemetry_recorded" in events, events
 assert data["extra"]["agent_manifest_recorded"] is True
 PY
