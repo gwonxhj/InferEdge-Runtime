@@ -375,6 +375,88 @@ def validate_optional_runtime_telemetry(result: dict) -> None:
         if expected not in coverage["expected_fields"]:
             raise AssertionError(f"runtime_telemetry.coverage.expected_fields missing {expected}")
 
+    history_seed = telemetry.get("history_seed")
+    if history_seed is not None:
+        validate_runtime_telemetry_history_seed(history_seed, telemetry)
+
+
+def validate_runtime_telemetry_history_seed(history_seed: dict, telemetry: dict) -> None:
+    if not isinstance(history_seed, dict):
+        raise AssertionError("runtime_telemetry.history_seed must be an object when present")
+    for field in (
+        "schema_version",
+        "evidence_role",
+        "registry_owner",
+        "decision_owner",
+        "source_result_schema_version",
+        "source_telemetry_schema_version",
+        "replay_scope",
+    ):
+        if not isinstance(history_seed.get(field), str):
+            raise AssertionError(f"runtime_telemetry.history_seed.{field} must be a string")
+    if history_seed["schema_version"] != "inferedge-runtime-telemetry-history-seed-v1":
+        raise AssertionError("runtime_telemetry.history_seed.schema_version is invalid")
+    if history_seed["registry_owner"] != "edgeenv":
+        raise AssertionError("runtime_telemetry.history_seed.registry_owner must be edgeenv")
+    if history_seed["decision_owner"] != "lab":
+        raise AssertionError("runtime_telemetry.history_seed.decision_owner must be lab")
+    if history_seed["source_telemetry_schema_version"] != telemetry["schema_version"]:
+        raise AssertionError("runtime_telemetry.history_seed source telemetry schema mismatch")
+    for field in ("replay_ready", "production_monitoring", "missing_telemetry_is_failure"):
+        if not isinstance(history_seed.get(field), bool):
+            raise AssertionError(f"runtime_telemetry.history_seed.{field} must be a boolean")
+    if history_seed["production_monitoring"] is not False:
+        raise AssertionError("runtime_telemetry.history_seed.production_monitoring must be false")
+    if history_seed["missing_telemetry_is_failure"] is not False:
+        raise AssertionError("runtime_telemetry.history_seed.missing_telemetry_is_failure must be false")
+    for field in ("recommended_registry_key_fields", "time_series_fields"):
+        values = history_seed.get(field)
+        if not isinstance(values, list) or not all(isinstance(item, str) for item in values):
+            raise AssertionError(f"runtime_telemetry.history_seed.{field} must be a string array")
+    for expected in ("compare_key", "backend_key", "precision", "power_mode"):
+        if expected not in history_seed["recommended_registry_key_fields"]:
+            raise AssertionError(f"runtime_telemetry.history_seed registry key fields missing {expected}")
+    for expected in (
+        "telemetry_timestamp",
+        "execution_sequence_id",
+        "latency.mean_ms",
+        "operation.timeout_observed",
+    ):
+        if expected not in history_seed["time_series_fields"]:
+            raise AssertionError(f"runtime_telemetry.history_seed time series fields missing {expected}")
+
+    source_result = history_seed.get("source_result")
+    if not isinstance(source_result, dict):
+        raise AssertionError("runtime_telemetry.history_seed.source_result must be an object")
+    for field in ("compare_key", "backend_key", "engine_backend", "device", "precision", "power_mode"):
+        if not isinstance(source_result.get(field), str):
+            raise AssertionError(f"runtime_telemetry.history_seed.source_result.{field} must be a string")
+
+    points = history_seed.get("points")
+    if not isinstance(points, list) or not points:
+        raise AssertionError("runtime_telemetry.history_seed.points must be a non-empty array")
+    first_point = points[0]
+    if not isinstance(first_point, dict):
+        raise AssertionError("runtime_telemetry.history_seed.points[] must be an object")
+    if first_point.get("execution_sequence_id") != telemetry["execution_sequence_id"]:
+        raise AssertionError("runtime_telemetry.history_seed point sequence id mismatch")
+    if first_point.get("telemetry_timestamp") != telemetry["telemetry_timestamp"]:
+        raise AssertionError("runtime_telemetry.history_seed point timestamp mismatch")
+    for point_field, telemetry_value in (
+        ("mean_ms", telemetry["latency"]["mean_ms"]),
+        ("p95_ms", telemetry["latency"]["p95_ms"]),
+        ("p99_ms", telemetry["latency"]["p99_ms"]),
+        ("fps", telemetry["latency"]["fps"]),
+        ("inference_interval_ms", telemetry["latency"]["inference_interval_ms"]),
+        ("rolling_latency_mean_ms", telemetry["latency"]["rolling_latency_mean_ms"]),
+        ("rolling_latency_std_ms", telemetry["latency"]["rolling_latency_std_ms"]),
+    ):
+        if first_point.get(point_field) != telemetry_value:
+            raise AssertionError(f"runtime_telemetry.history_seed point {point_field} mismatch")
+    for field in ("timeout_observed", "latency_budget_exceeded", "deadline_missed"):
+        if first_point.get(field) != telemetry["operation"][field]:
+            raise AssertionError(f"runtime_telemetry.history_seed point {field} mismatch")
+
 
 class JetsonEvidenceContractTest(unittest.TestCase):
     def test_runtime_binary_parses_tegrastats_log_when_available(self):

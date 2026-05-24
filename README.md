@@ -488,7 +488,7 @@ This is the first bridge toward the reliable edge agent runtime direction. It re
 Runtime result JSON also includes additive operation evidence blocks:
 
 - `runtime_health_snapshot`: execution health, backend/device context, backend availability, run count, latency/FPS summary, latency-budget/deadline observation, tegrastats evidence availability, and explicit timeout observation status. `--timeout-ms` records an observation threshold; it does not claim production request cancellation.
-- `runtime_telemetry`: single-result telemetry seed for Runtime Intelligence history/replay. It records timestamp, execution sequence id, latency rolling seed values, power mode, tegrastats-derived resource evidence when available, operation flags, and explicit `missing_fields` for telemetry that the current device/run did not provide. This is local-first evidence, not a production monitoring stream.
+- `runtime_telemetry`: single-result telemetry seed for Runtime Intelligence history/replay. It records timestamp, execution sequence id, latency rolling seed values, power mode, tegrastats-derived resource evidence when available, operation flags, and explicit `missing_fields` for telemetry that the current device/run did not provide. The additive `history_seed` block packages the same single-result evidence as a one-point replay seed for EdgeEnv telemetry history accumulation. This is local-first evidence, not a production monitoring stream.
 - `runtime_error_classification`: structured success/error category, severity, retryability, retry hint, observed mean latency, and timeout budget for downstream report context. Skipped execution is recorded as `runtime_execution_skipped` with `retry_hint: check_backend_availability` so Lab/Orchestrator can explain runtime failure handling without treating Runtime as a worker daemon.
 - `runtime_events`: compact indexed lifecycle event log for configuration, benchmark completion, error classification, optional agent context, telemetry recording, operation summary, and tegrastats parsing.
 - `runtime_operation_summary`: compact handoff index for Lab/Orchestrator/AIGuard with `health_reason`, `risk_labels`, `evidence_gaps`, retryability, and a conservative `recommended_action`. It keeps `decision_owner: lab`, `scheduler_owner: orchestrator`, and `production_cancellation: false`.
@@ -501,6 +501,7 @@ Runtime Intelligence boundary:
 - `collection_mode` starts as `single_result_export`; EdgeEnv owns telemetry history accumulation and comparability-first regression.
 - Missing device telemetry remains explicit in `missing_fields` instead of being fabricated.
 - `runtime_telemetry.coverage` records expected / observed / missing telemetry fields, with `comparability_owner: edgeenv` and `missing_telemetry_is_failure: false`.
+- `runtime_telemetry.history_seed` uses `inferedge-runtime-telemetry-history-seed-v1`, keeps `registry_owner: edgeenv`, `decision_owner: lab`, `production_monitoring: false`, and exposes a single replay point that EdgeEnv can later accumulate into a local telemetry history.
 - Runtime exports telemetry evidence only. AIGuard may turn it into deterministic anomaly evidence, and Lab remains the deployment decision owner.
 
 The committed fixture

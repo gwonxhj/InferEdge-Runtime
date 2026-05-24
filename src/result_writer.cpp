@@ -560,6 +560,122 @@ void write_runtime_telemetry_coverage_json(
         << indent << "}";
 }
 
+void write_runtime_telemetry_history_seed_json(
+    std::ostream& output,
+    const RuntimeConfig& config,
+    const EngineMetadata& engine_metadata,
+    const BenchmarkResult& benchmark_result,
+    const TegrastatsSummary& tegrastats_summary,
+    const std::string& timestamp,
+    int indent_spaces) {
+    const std::string indent(static_cast<std::size_t>(indent_spaces), ' ');
+    const bool has_tegrastats = tegrastats_summary.status == "parsed";
+    const std::string precision = config.manifest_precision.empty() ? "fp32" : config.manifest_precision;
+    output
+        << "{\n"
+        << indent << "  \"schema_version\": \"inferedge-runtime-telemetry-history-seed-v1\",\n"
+        << indent << "  \"evidence_role\": \"runtime_telemetry_history_seed\",\n"
+        << indent << "  \"registry_owner\": \"edgeenv\",\n"
+        << indent << "  \"decision_owner\": \"lab\",\n"
+        << indent << "  \"source_result_schema_version\": \"inferedge-runtime-result-v1\",\n"
+        << indent << "  \"source_telemetry_schema_version\": \"inferedge-runtime-telemetry-v1\",\n"
+        << indent << "  \"replay_scope\": \"single_result_to_history\",\n"
+        << indent << "  \"replay_ready\": true,\n"
+        << indent << "  \"production_monitoring\": false,\n"
+        << indent << "  \"missing_telemetry_is_failure\": false,\n"
+        << indent << "  \"source_result\": {\n"
+        << indent << "    \"compare_key\": " << json_string(make_compare_key(config)) << ",\n"
+        << indent << "    \"backend_key\": " << json_string(make_backend_key(engine_metadata, config)) << ",\n"
+        << indent << "    \"engine_backend\": " << json_string(engine_metadata.backend) << ",\n"
+        << indent << "    \"device\": " << json_string(config.device) << ",\n"
+        << indent << "    \"precision\": " << json_string(precision) << ",\n"
+        << indent << "    \"power_mode\": " << json_string(config.power_mode) << "\n"
+        << indent << "  },\n"
+        << indent << "  \"recommended_registry_key_fields\": ";
+    write_string_array_json(output, {
+        "compare_key",
+        "backend_key",
+        "device",
+        "precision",
+        "power_mode",
+        "run_config",
+    });
+    output
+        << ",\n"
+        << indent << "  \"time_series_fields\": ";
+    write_string_array_json(output, {
+        "telemetry_timestamp",
+        "execution_sequence_id",
+        "latency.mean_ms",
+        "latency.p95_ms",
+        "latency.p99_ms",
+        "latency.fps",
+        "latency.inference_interval_ms",
+        "latency.rolling_latency_mean_ms",
+        "latency.rolling_latency_std_ms",
+        "resource.ram_used_mb",
+        "resource.max_temperature_c",
+        "resource.vdd_in_mw_avg",
+        "operation.queue_depth",
+        "operation.runtime_uptime_sec",
+        "operation.timeout_observed",
+        "operation.latency_budget_exceeded",
+        "operation.deadline_missed",
+    });
+    output
+        << ",\n"
+        << indent << "  \"points\": [\n"
+        << indent << "    {\n"
+        << indent << "      \"execution_sequence_id\": 0,\n"
+        << indent << "      \"telemetry_timestamp\": " << json_string(timestamp) << ",\n"
+        << indent << "      \"mean_ms\": " << benchmark_result.mean_ms << ",\n"
+        << indent << "      \"p95_ms\": " << benchmark_result.p95_ms << ",\n"
+        << indent << "      \"p99_ms\": " << benchmark_result.p99_ms << ",\n"
+        << indent << "      \"fps\": " << benchmark_result.fps << ",\n"
+        << indent << "      \"inference_interval_ms\": " << benchmark_result.mean_ms << ",\n"
+        << indent << "      \"rolling_latency_mean_ms\": " << benchmark_result.mean_ms << ",\n"
+        << indent << "      \"rolling_latency_std_ms\": " << benchmark_result.std_ms << ",\n"
+        << indent << "      \"ram_used_mb\": ";
+    if (has_tegrastats) {
+        output << tegrastats_summary.ram_used_mb_max;
+    } else {
+        output << "null";
+    }
+    output
+        << ",\n"
+        << indent << "      \"max_temperature_c\": ";
+    if (has_tegrastats) {
+        output << tegrastats_summary.max_temp_c;
+    } else {
+        output << "null";
+    }
+    output
+        << ",\n"
+        << indent << "      \"vdd_in_mw_avg\": ";
+    if (has_tegrastats) {
+        output << tegrastats_summary.vdd_in_mw_avg;
+    } else {
+        output << "null";
+    }
+    output
+        << ",\n"
+        << indent << "      \"queue_depth\": null,\n"
+        << indent << "      \"runtime_uptime_sec\": null,\n"
+        << indent << "      \"timeout_observed\": "
+        << (timeout_observed(config, benchmark_result) ? "true" : "false") << ",\n"
+        << indent << "      \"latency_budget_exceeded\": "
+        << (latency_budget_exceeded(config, benchmark_result) ? "true" : "false") << ",\n"
+        << indent << "      \"deadline_missed\": "
+        << (should_mark_deadline_missed(config, benchmark_result) ? "true" : "false") << ",\n"
+        << indent << "      \"power_mode\": " << json_string(config.power_mode) << ",\n"
+        << indent << "      \"telemetry_source\": "
+        << json_string(has_tegrastats ? "tegrastats" : "not_available") << ",\n"
+        << indent << "      \"tegrastats_status\": " << json_string(tegrastats_summary.status) << "\n"
+        << indent << "    }\n"
+        << indent << "  ]\n"
+        << indent << "}";
+}
+
 std::string runtime_operation_recommended_action(
     const RuntimeConfig& config,
     const EngineMetadata& engine_metadata,
@@ -788,6 +904,17 @@ void write_runtime_telemetry_json(
         << ",\n"
         << indent << "  \"coverage\": ";
     write_runtime_telemetry_coverage_json(output, tegrastats_summary, indent_spaces + 2);
+    output
+        << ",\n"
+        << indent << "  \"history_seed\": ";
+    write_runtime_telemetry_history_seed_json(
+        output,
+        config,
+        engine_metadata,
+        benchmark_result,
+        tegrastats_summary,
+        timestamp,
+        indent_spaces + 2);
     output
         << ",\n"
         << indent << "  \"production_monitoring\": false\n"
