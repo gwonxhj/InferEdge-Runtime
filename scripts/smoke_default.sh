@@ -108,9 +108,12 @@ assert "telemetry_timestamp" in coverage["observed_fields"], coverage
 assert coverage["missing_fields"] == telemetry["missing_fields"], coverage
 history_seed = telemetry["history_seed"]
 assert history_seed["schema_version"] == "inferedge-runtime-telemetry-history-seed-v1", history_seed
+assert history_seed["evidence_role"] == "runtime_telemetry_history_seed", history_seed
 assert history_seed["registry_owner"] == "edgeenv", history_seed
 assert history_seed["decision_owner"] == "lab", history_seed
+assert history_seed["source_result_schema_version"] == telemetry["source_result_schema_version"], history_seed
 assert history_seed["source_telemetry_schema_version"] == telemetry["schema_version"], history_seed
+assert history_seed["replay_scope"] == "single_result_to_history", history_seed
 assert history_seed["production_monitoring"] is False, history_seed
 assert history_seed["missing_telemetry_is_failure"] is False, history_seed
 assert history_seed["replay_ready"] is True, history_seed
@@ -122,6 +125,8 @@ assert history_seed["points"][0]["telemetry_timestamp"] == telemetry["telemetry_
 assert history_seed["points"][0]["execution_sequence_id"] == telemetry["execution_sequence_id"], history_seed
 assert history_seed["points"][0]["mean_ms"] == telemetry["latency"]["mean_ms"], history_seed
 assert history_seed["points"][0]["timeout_observed"] == telemetry["operation"]["timeout_observed"], history_seed
+assert history_seed["points"][0]["power_mode"] == telemetry["power_mode"], history_seed
+assert history_seed["points"][0]["telemetry_source"] == telemetry["resource"]["telemetry_source"], history_seed
 assert events["runtime_telemetry_recorded"]["observed_field_count"] == coverage["observed_field_count"]
 assert events["runtime_telemetry_recorded"]["missing_field_count"] == coverage["missing_field_count"]
 assert events["runtime_telemetry_recorded"]["schema"] == "inferedge-runtime-telemetry-v1"
@@ -197,6 +202,9 @@ assert coverage["missing_fields"] == telemetry["missing_fields"], coverage
 history_seed = telemetry["history_seed"]
 assert history_seed["registry_owner"] == "edgeenv", history_seed
 assert history_seed["decision_owner"] == "lab", history_seed
+assert history_seed["source_result_schema_version"] == telemetry["source_result_schema_version"], history_seed
+assert history_seed["source_telemetry_schema_version"] == telemetry["schema_version"], history_seed
+assert history_seed["replay_scope"] == "single_result_to_history", history_seed
 assert history_seed["source_result"]["compare_key"] == data["compare_key"], history_seed
 assert history_seed["points"][0]["p99_ms"] == telemetry["latency"]["p99_ms"], history_seed
 assert history_seed["points"][0]["deadline_missed"] == telemetry["operation"]["deadline_missed"], history_seed

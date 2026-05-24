@@ -208,12 +208,18 @@ class AgentRuntimeResultContractTest(unittest.TestCase):
             history_seed["schema_version"],
             "inferedge-runtime-telemetry-history-seed-v1",
         )
+        self.assertEqual(history_seed["evidence_role"], "runtime_telemetry_history_seed")
         self.assertEqual(history_seed["registry_owner"], "edgeenv")
         self.assertEqual(history_seed["decision_owner"], "lab")
+        self.assertEqual(
+            history_seed["source_result_schema_version"],
+            telemetry["source_result_schema_version"],
+        )
         self.assertEqual(
             history_seed["source_telemetry_schema_version"],
             telemetry["schema_version"],
         )
+        self.assertEqual(history_seed["replay_scope"], "single_result_to_history")
         self.assertFalse(history_seed["production_monitoring"])
         self.assertFalse(history_seed["missing_telemetry_is_failure"])
         self.assertTrue(history_seed["replay_ready"])
@@ -236,6 +242,8 @@ class AgentRuntimeResultContractTest(unittest.TestCase):
         self.assertEqual(point["p99_ms"], telemetry["latency"]["p99_ms"])
         self.assertEqual(point["timeout_observed"], telemetry["operation"]["timeout_observed"])
         self.assertEqual(point["deadline_missed"], telemetry["operation"]["deadline_missed"])
+        self.assertEqual(point["power_mode"], telemetry["power_mode"])
+        self.assertEqual(point["telemetry_source"], telemetry["resource"]["telemetry_source"])
 
         extra = result["extra"]
         self.assertTrue(extra["agent_manifest_recorded"])
