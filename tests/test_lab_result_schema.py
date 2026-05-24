@@ -396,12 +396,18 @@ def validate_runtime_telemetry_history_seed(history_seed: dict, telemetry: dict)
             raise AssertionError(f"runtime_telemetry.history_seed.{field} must be a string")
     if history_seed["schema_version"] != "inferedge-runtime-telemetry-history-seed-v1":
         raise AssertionError("runtime_telemetry.history_seed.schema_version is invalid")
+    if history_seed["evidence_role"] != "runtime_telemetry_history_seed":
+        raise AssertionError("runtime_telemetry.history_seed.evidence_role is invalid")
     if history_seed["registry_owner"] != "edgeenv":
         raise AssertionError("runtime_telemetry.history_seed.registry_owner must be edgeenv")
     if history_seed["decision_owner"] != "lab":
         raise AssertionError("runtime_telemetry.history_seed.decision_owner must be lab")
+    if history_seed["source_result_schema_version"] != telemetry["source_result_schema_version"]:
+        raise AssertionError("runtime_telemetry.history_seed source result schema mismatch")
     if history_seed["source_telemetry_schema_version"] != telemetry["schema_version"]:
         raise AssertionError("runtime_telemetry.history_seed source telemetry schema mismatch")
+    if history_seed["replay_scope"] != "single_result_to_history":
+        raise AssertionError("runtime_telemetry.history_seed.replay_scope is invalid")
     for field in ("replay_ready", "production_monitoring", "missing_telemetry_is_failure"):
         if not isinstance(history_seed.get(field), bool):
             raise AssertionError(f"runtime_telemetry.history_seed.{field} must be a boolean")
@@ -409,6 +415,8 @@ def validate_runtime_telemetry_history_seed(history_seed: dict, telemetry: dict)
         raise AssertionError("runtime_telemetry.history_seed.production_monitoring must be false")
     if history_seed["missing_telemetry_is_failure"] is not False:
         raise AssertionError("runtime_telemetry.history_seed.missing_telemetry_is_failure must be false")
+    if history_seed["replay_ready"] is not True:
+        raise AssertionError("runtime_telemetry.history_seed.replay_ready must be true")
     for field in ("recommended_registry_key_fields", "time_series_fields"):
         values = history_seed.get(field)
         if not isinstance(values, list) or not all(isinstance(item, str) for item in values):
@@ -456,6 +464,10 @@ def validate_runtime_telemetry_history_seed(history_seed: dict, telemetry: dict)
     for field in ("timeout_observed", "latency_budget_exceeded", "deadline_missed"):
         if first_point.get(field) != telemetry["operation"][field]:
             raise AssertionError(f"runtime_telemetry.history_seed point {field} mismatch")
+    if first_point.get("power_mode") != telemetry["power_mode"]:
+        raise AssertionError("runtime_telemetry.history_seed point power_mode mismatch")
+    if first_point.get("telemetry_source") != telemetry["resource"]["telemetry_source"]:
+        raise AssertionError("runtime_telemetry.history_seed point telemetry_source mismatch")
 
 
 class JetsonEvidenceContractTest(unittest.TestCase):
