@@ -440,6 +440,20 @@ def validate_runtime_telemetry_history_seed(history_seed: dict, telemetry: dict)
         if not isinstance(source_result.get(field), str):
             raise AssertionError(f"runtime_telemetry.history_seed.source_result.{field} must be a string")
 
+    run_config = history_seed.get("run_config")
+    if not isinstance(run_config, dict):
+        raise AssertionError("runtime_telemetry.history_seed.run_config must be an object")
+    for field in ("batch", "height", "width", "warmup", "runs"):
+        if isinstance(run_config.get(field), bool) or not isinstance(run_config.get(field), int):
+            raise AssertionError(f"runtime_telemetry.history_seed.run_config.{field} must be an integer")
+    if run_config.get("timeout_ms") is not None and (
+        isinstance(run_config.get("timeout_ms"), bool) or not isinstance(run_config.get("timeout_ms"), int)
+    ):
+        raise AssertionError("runtime_telemetry.history_seed.run_config.timeout_ms must be an integer or null")
+    for field in ("input_mode", "input_preprocess", "power_mode", "jetson_clocks"):
+        if not isinstance(run_config.get(field), str):
+            raise AssertionError(f"runtime_telemetry.history_seed.run_config.{field} must be a string")
+
     points = history_seed.get("points")
     if not isinstance(points, list) or not points:
         raise AssertionError("runtime_telemetry.history_seed.points must be a non-empty array")
