@@ -591,6 +591,25 @@ void write_runtime_telemetry_history_seed_json(
         << indent << "    \"precision\": " << json_string(precision) << ",\n"
         << indent << "    \"power_mode\": " << json_string(config.power_mode) << "\n"
         << indent << "  },\n"
+        << indent << "  \"run_config\": {\n"
+        << indent << "    \"batch\": " << config.batch << ",\n"
+        << indent << "    \"height\": " << config.height << ",\n"
+        << indent << "    \"width\": " << config.width << ",\n"
+        << indent << "    \"warmup\": " << config.warmup << ",\n"
+        << indent << "    \"runs\": " << config.runs << ",\n"
+        << indent << "    \"timeout_ms\": ";
+    if (config.timeout_ms > 0) {
+        output << config.timeout_ms;
+    } else {
+        output << "null";
+    }
+    output
+        << ",\n"
+        << indent << "    \"input_mode\": " << json_string(config.input_mode()) << ",\n"
+        << indent << "    \"input_preprocess\": " << json_string(config.input_preprocess()) << ",\n"
+        << indent << "    \"power_mode\": " << json_string(config.power_mode) << ",\n"
+        << indent << "    \"jetson_clocks\": " << json_string(config.jetson_clocks) << "\n"
+        << indent << "  },\n"
         << indent << "  \"recommended_registry_key_fields\": ";
     write_string_array_json(output, {
         "compare_key",

@@ -121,6 +121,14 @@ assert "compare_key" in history_seed["recommended_registry_key_fields"], history
 assert "latency.mean_ms" in history_seed["time_series_fields"], history_seed
 assert history_seed["source_result"]["compare_key"] == data["compare_key"], history_seed
 assert history_seed["source_result"]["backend_key"] == data["backend_key"], history_seed
+assert history_seed["run_config"]["batch"] == data["run_config"]["batch"], history_seed
+assert history_seed["run_config"]["height"] == data["run_config"]["height"], history_seed
+assert history_seed["run_config"]["width"] == data["run_config"]["width"], history_seed
+assert history_seed["run_config"]["warmup"] == data["run_config"]["warmup"], history_seed
+assert history_seed["run_config"]["runs"] == data["run_config"]["runs"], history_seed
+assert history_seed["run_config"]["timeout_ms"] == data["run_config"]["timeout_ms"], history_seed
+assert history_seed["run_config"]["input_mode"] == health["input_mode"], history_seed
+assert history_seed["run_config"]["power_mode"] == telemetry["power_mode"], history_seed
 assert history_seed["points"][0]["telemetry_timestamp"] == telemetry["telemetry_timestamp"], history_seed
 assert history_seed["points"][0]["execution_sequence_id"] == telemetry["execution_sequence_id"], history_seed
 assert history_seed["points"][0]["mean_ms"] == telemetry["latency"]["mean_ms"], history_seed
@@ -206,6 +214,11 @@ assert history_seed["source_result_schema_version"] == telemetry["source_result_
 assert history_seed["source_telemetry_schema_version"] == telemetry["schema_version"], history_seed
 assert history_seed["replay_scope"] == "single_result_to_history", history_seed
 assert history_seed["source_result"]["compare_key"] == data["compare_key"], history_seed
+assert history_seed["run_config"]["batch"] == data["run_config"]["batch"], history_seed
+assert history_seed["run_config"]["runs"] == data["run_config"]["runs"], history_seed
+assert history_seed["run_config"]["timeout_ms"] == data["run_config"]["timeout_ms"], history_seed
+assert history_seed["run_config"]["input_mode"] == health["input_mode"], history_seed
+assert history_seed["run_config"]["power_mode"] == telemetry["power_mode"], history_seed
 assert history_seed["points"][0]["p99_ms"] == telemetry["latency"]["p99_ms"], history_seed
 assert history_seed["points"][0]["deadline_missed"] == telemetry["operation"]["deadline_missed"], history_seed
 assert "runtime_telemetry_recorded" in events, events
