@@ -128,7 +128,9 @@ assert history_seed["run_config"]["warmup"] == data["run_config"]["warmup"], his
 assert history_seed["run_config"]["runs"] == data["run_config"]["runs"], history_seed
 assert history_seed["run_config"]["timeout_ms"] == data["run_config"]["timeout_ms"], history_seed
 assert history_seed["run_config"]["input_mode"] == health["input_mode"], history_seed
+assert history_seed["run_config"]["input_preprocess"] == health["input_preprocess"], history_seed
 assert history_seed["run_config"]["power_mode"] == telemetry["power_mode"], history_seed
+assert history_seed["run_config"]["jetson_clocks"] == data["run_config"]["jetson_clocks"], history_seed
 assert history_seed["points"][0]["telemetry_timestamp"] == telemetry["telemetry_timestamp"], history_seed
 assert history_seed["points"][0]["execution_sequence_id"] == telemetry["execution_sequence_id"], history_seed
 assert history_seed["points"][0]["mean_ms"] == telemetry["latency"]["mean_ms"], history_seed
@@ -218,7 +220,9 @@ assert history_seed["run_config"]["batch"] == data["run_config"]["batch"], histo
 assert history_seed["run_config"]["runs"] == data["run_config"]["runs"], history_seed
 assert history_seed["run_config"]["timeout_ms"] == data["run_config"]["timeout_ms"], history_seed
 assert history_seed["run_config"]["input_mode"] == health["input_mode"], history_seed
+assert history_seed["run_config"]["input_preprocess"] == health["input_preprocess"], history_seed
 assert history_seed["run_config"]["power_mode"] == telemetry["power_mode"], history_seed
+assert history_seed["run_config"]["jetson_clocks"] == data["run_config"]["jetson_clocks"], history_seed
 assert history_seed["points"][0]["p99_ms"] == telemetry["latency"]["p99_ms"], history_seed
 assert history_seed["points"][0]["deadline_missed"] == telemetry["operation"]["deadline_missed"], history_seed
 assert "runtime_telemetry_recorded" in events, events
