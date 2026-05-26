@@ -242,7 +242,12 @@ class AgentRuntimeResultContractTest(unittest.TestCase):
         self.assertEqual(history_seed["run_config"]["runs"], result["run_config"]["runs"])
         self.assertEqual(history_seed["run_config"]["timeout_ms"], result["run_config"]["timeout_ms"])
         self.assertEqual(history_seed["run_config"]["input_mode"], result["runtime_health_snapshot"]["input_mode"])
+        self.assertEqual(
+            history_seed["run_config"]["input_preprocess"],
+            result["runtime_health_snapshot"]["input_preprocess"],
+        )
         self.assertEqual(history_seed["run_config"]["power_mode"], telemetry["power_mode"])
+        self.assertEqual(history_seed["run_config"]["jetson_clocks"], result["run_config"]["jetson_clocks"])
         point = history_seed["points"][0]
         self.assertEqual(point["execution_sequence_id"], telemetry["execution_sequence_id"])
         self.assertEqual(point["telemetry_timestamp"], telemetry["telemetry_timestamp"])
