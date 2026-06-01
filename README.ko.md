@@ -14,6 +14,16 @@ C++ runtime execution and result export layer
 - built artifact 실행 시 Forge manifest의 source model identity를 보존합니다.
 - Forge `agent_manifest.json` context를 optional `agent` result block으로 기록할 수 있습니다.
 
+## 역할 경계 한눈에 보기
+
+| 영역 | Runtime이 소유하는 것 | Runtime이 소유하지 않는 것 |
+|---|---|---|
+| Inference execution | ONNX Runtime CPU와 Jetson TensorRT path를 실행하고 latency, FPS, output metadata, system context, success/error evidence를 기록합니다. | artifact build, model conversion, Forge `metadata.json` / `manifest.json` provenance 소유. |
+| Result contract | `compare_key`, `backend_key`, `run_config`, `system`, `extra`, additive health/telemetry/event evidence를 포함한 Lab-compatible `result.json`을 export합니다. | Lab compare output, Lab `deployment_decision`, AIGuard `guard_analysis` contract 변경. |
+| Runtime health / telemetry | `runtime_health_snapshot`, timeout/error classification, `runtime_events`, `runtime_operation_summary`, single-result telemetry seed를 기록합니다. | EdgeEnv registry, comparability checker, runtime regression owner, production observability platform 역할. |
+| Operation boundary | Orchestrator, AIGuard, EdgeEnv, Lab이 downstream에서 해석할 execution evidence를 제공합니다. | multi-workload scheduler, queue/drop/fallback owner, remote dispatch control plane, production inference server 역할. |
+| Jetson evidence | backend, precision, power mode, `jetson_clocks`, tegrastats context를 run-configuration evidence로 보존합니다. | 15W/25W나 clock state가 다른 실행을 same-condition regression으로 해석하거나, short smoke를 thermal endurance validation처럼 표현하는 것. |
+
 ## InferEdge-Runtime의 차별점
 
 InferEdge-Runtime은 단순한 benchmark wrapper가 아닙니다.

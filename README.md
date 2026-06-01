@@ -18,6 +18,16 @@ Language: English | [한국어](README.ko.md)
 - Preserves Forge manifest source model identity when running built artifacts
 - Optionally records Forge `agent_manifest.json` context as an additive `agent` result block
 
+## Role Boundary At A Glance
+
+| Area | Runtime owns | Runtime does not own |
+|---|---|---|
+| Inference execution | Runs ONNX Runtime CPU and Jetson TensorRT paths, then records latency, FPS, output metadata, system context, and success/error evidence. | Building artifacts, converting models, or owning Forge `metadata.json` / `manifest.json` provenance. |
+| Result contract | Exports Lab-compatible `result.json` fields such as `compare_key`, `backend_key`, `run_config`, `system`, `extra`, and additive health/telemetry/event evidence. | Changing Lab compare output, Lab `deployment_decision`, or AIGuard `guard_analysis` contracts. |
+| Runtime health / telemetry | Records `runtime_health_snapshot`, timeout/error classification, `runtime_events`, `runtime_operation_summary`, and single-result telemetry seeds. | Acting as the EdgeEnv registry, comparability checker, runtime regression owner, or production observability platform. |
+| Operation boundary | Supplies execution evidence that Orchestrator, AIGuard, EdgeEnv, and Lab can interpret downstream. | Becoming a multi-workload scheduler, queue/drop/fallback owner, remote dispatch control plane, or production inference server. |
+| Jetson evidence | Preserves backend, precision, power mode, `jetson_clocks`, and tegrastats context as run-configuration evidence. | Treating 15W/25W or different clock states as same-condition regression, or presenting quick smoke evidence as thermal endurance validation. |
+
 ## What Makes InferEdge-Runtime Different?
 
 InferEdge-Runtime is not a benchmark wrapper.
