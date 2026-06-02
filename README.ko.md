@@ -107,7 +107,7 @@ Runtime result JSON에는 `runtime_health_snapshot`, `runtime_error_classificati
 - 기존 Runtime result는 `agent` block 없이도 계속 유효합니다.
 - `agent.schema_version`은 `inferedge-runtime-agent-task-v1`입니다.
 - Runtime은 task context를 기록할 뿐 scheduling/policy/deployment decision owner가 아닙니다.
-- 상세 계약은 [Agent Runtime Result Contract](docs/agent_runtime_result_contract.md)에 정리되어 있습니다.
+- 상세 계약은 [Agent Runtime Result Contract](docs/agent_runtime_result_contract.ko.md)에 정리되어 있습니다. 대표/canonical 문서는 [English contract](docs/agent_runtime_result_contract.md)입니다.
 
 ## 빠른 실행
 

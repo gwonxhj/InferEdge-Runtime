@@ -1,5 +1,7 @@
 # Agent Runtime Result Contract
 
+Language: English | [한국어](agent_runtime_result_contract.ko.md)
+
 InferEdge-Runtime can attach optional agent task context to the existing Lab-compatible Runtime result JSON.
 
 This contract is intentionally additive. Existing Runtime results remain valid without an `agent` block, and Lab-compatible top-level fields such as `compare_key`, `backend_key`, `run_config`, `latency_ms`, `jetson_evidence`, and `extra` must not change shape.
