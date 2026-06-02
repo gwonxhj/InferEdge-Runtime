@@ -543,7 +543,7 @@ Contract notes:
 - `agent.deadline_missed` is computed from mean latency and `latency_budget_ms` unless explicitly set with `--agent-deadline-missed`.
 - Runtime records task context only; scheduling/policy decisions remain Orchestrator/Lab responsibilities.
 
-See [docs/agent_runtime_result_contract.md](docs/agent_runtime_result_contract.md) for the full contract.
+See [docs/agent_runtime_result_contract.md](docs/agent_runtime_result_contract.md) ([한국어: Agent Runtime Result Contract quick guide](docs/agent_runtime_result_contract.ko.md)) for the full contract.
 
 ## Forge Handoff Input Preparation
 
