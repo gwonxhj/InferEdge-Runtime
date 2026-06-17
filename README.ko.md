@@ -87,6 +87,12 @@ Runtime은 Forge `agent_manifest.json`을 선택적으로 읽어 기존 Lab-comp
 
 Runtime result JSON에는 `runtime_health_snapshot`, `runtime_error_classification`, `runtime_events`, `runtime_operation_summary`도 additive evidence로 기록됩니다. 이제 health snapshot은 backend availability, latency budget/deadline observation, tegrastats evidence availability와 `health_reason`을 함께 남기고, runtime events는 sequential `event_index`를 가진 lifecycle trace로 기록됩니다. `runtime_operation_summary`는 Lab/Orchestrator/AIGuard handoff용 compact index로 `risk_labels`, `evidence_gaps`, retryability, conservative `recommended_action`을 남기되 `decision_owner: lab`, `scheduler_owner: orchestrator`, `production_cancellation: false`를 유지합니다. `runtime_telemetry.coverage`는 expected / observed / missing telemetry fields를 기록하고 `comparability_owner: edgeenv`, `missing_telemetry_is_failure: false`를 명시합니다. `runtime_telemetry.history_seed`는 `registry_owner: edgeenv`, `decision_owner: lab`, `production_monitoring: false`를 유지하며 EdgeEnv telemetry history accumulation으로 넘길 수 있는 single-result replay point를 제공합니다. 또한 seed 안에 compact `run_config` snapshot을 함께 담아 EdgeEnv가 Runtime 전체 result를 다시 해석하지 않아도 replay/comparability context를 보존할 수 있게 합니다. `--timeout-ms`는 latency timeout 관측 기준을 남기는 옵션이며, production request cancellation을 의미하지 않습니다. 실행이 `skipped`로 끝나면 Runtime은 `runtime_execution_skipped`, `retryable: true`, `retry_hint: check_backend_availability`를 남겨 Lab/Orchestrator가 failure handling evidence로 해석할 수 있게 합니다.
 
+Reviewer-facing Orchestrator sample인 `agent_scheduler_delay_sample.json`과
+`remote_fallback_recovery_sample.json`은 Runtime result downstream에 있는
+검토용 경로입니다. 이 sample은 AIGuard `scheduler_delay_pattern`,
+`remote_execution_recovered_by_fallback` evidence를 설명할 수 있지만 Runtime
+benchmark output, `result.json` schema input, deployment policy signal은 아닙니다.
+
 예시:
 
 ```bash

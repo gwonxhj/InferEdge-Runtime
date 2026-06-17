@@ -60,6 +60,12 @@ Telemetry history seed는 EdgeEnv가 history/replay/comparability evidence로
 이어받기 위한 single-result seed입니다. Runtime이 telemetry store나 production
 monitoring stream이 되는 것은 아닙니다.
 
+Orchestrator curated sample인 `agent_scheduler_delay_sample.json`과
+`remote_fallback_recovery_sample.json`은 Runtime result 이후의 reviewer
+navigation artifact입니다. 이 sample은 AIGuard `scheduler_delay_pattern`,
+`remote_execution_recovered_by_fallback` evidence와 연결될 수 있지만 Runtime
+benchmark output, `result.json` schema input, deployment policy signal은 아닙니다.
+
 ## Jetson 필요 여부
 
 이 문서를 읽거나 링크를 검증하는 작업에는 Jetson 기기가 필요 없습니다. 새로운
