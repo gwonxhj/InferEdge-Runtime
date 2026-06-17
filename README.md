@@ -515,6 +515,12 @@ Runtime Intelligence boundary:
 - EdgeEnv validates and preserves this seed as `runtime_telemetry_history_seed`; Lab may display the preserved marker in a Runtime Intelligence risk report, but Runtime does not own the registry or deployment decision.
 - Runtime exports telemetry evidence only. AIGuard may turn it into deterministic anomaly evidence, and Lab remains the deployment decision owner.
 
+Reviewer-facing Orchestrator samples such as `agent_scheduler_delay_sample.json`
+and `remote_fallback_recovery_sample.json` belong downstream of the Runtime
+result. They can explain AIGuard evidence types like `scheduler_delay_pattern`
+and `remote_execution_recovered_by_fallback`, but they are not Runtime
+benchmark outputs, `result.json` schema inputs, or deployment policy signals.
+
 The committed fixture
 `tests/fixtures/runtime_timeout_observed_result.json` shows the handoff case
 where a benchmark succeeds but crosses the configured latency observation

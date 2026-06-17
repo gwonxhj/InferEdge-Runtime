@@ -113,6 +113,12 @@ class ReadmeDocsTest(unittest.TestCase):
             "Lab-owned deployment decision",
             "same-condition regression",
             "production_monitoring: false",
+            "agent_scheduler_delay_sample.json",
+            "remote_fallback_recovery_sample.json",
+            "scheduler_delay_pattern",
+            "remote_execution_recovered_by_fallback",
+            "benchmark output",
+            "`result.json` schema input",
             "Jetson 필요 여부",
         ]:
             with self.subTest(marker=marker):
