@@ -188,6 +188,7 @@ Markdown 리포트는 Runtime JSON과 tegrastats evidence를 사람이 읽기 �
 
 - [Jetson evidence summary](docs/reports/jetson_evidence_summary.md)
 - [Jetson power-mode comparison](docs/reports/jetson_power_mode_comparison.md)
+- [Jetson evidence depth audit](docs/reports/jetson_evidence_depth_audit.md)
 
 ## 현재 범위와 future work
 
