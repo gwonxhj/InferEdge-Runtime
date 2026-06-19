@@ -393,6 +393,7 @@ Committed report snapshots:
 
 - [Jetson evidence summary](docs/reports/jetson_evidence_summary.md)
 - [Jetson power-mode comparison](docs/reports/jetson_power_mode_comparison.md)
+- [Jetson evidence depth audit](docs/reports/jetson_evidence_depth_audit.md)
 
 ## Benchmark Interpretation
 

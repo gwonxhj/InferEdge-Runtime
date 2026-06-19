@@ -26,6 +26,29 @@ class JetsonReportSnapshotTest(unittest.TestCase):
         self.assertIn("capture_depth | `short_smoke` | `short_smoke`", text)
         self.assertIn("should not be described as a sustained thermal benchmark", text)
 
+    def test_jetson_evidence_depth_audit_records_roadmap_boundary(self):
+        text = (
+            ROOT / "docs" / "reports" / "jetson_evidence_depth_audit.md"
+        ).read_text(encoding="utf-8")
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme_ko = (ROOT / "README.ko.md").read_text(encoding="utf-8")
+
+        for marker in [
+            "p95/p99 latency",
+            "Thermal behavior starter evidence",
+            "Memory behavior starter evidence",
+            "Power draw starter evidence",
+            "Not yet sustained",
+            "runs >= 500",
+            "tegrastats sample_count >= 300",
+            "Jetson hardware is required only for collecting that new sustained evidence",
+            "Runtime `result.json` compatibility",
+        ]:
+            self.assertIn(marker, text)
+
+        self.assertIn("docs/reports/jetson_evidence_depth_audit.md", readme)
+        self.assertIn("docs/reports/jetson_evidence_depth_audit.md", readme_ko)
+
 
 if __name__ == "__main__":
     unittest.main()
